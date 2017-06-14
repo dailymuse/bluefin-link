@@ -1,0 +1,22 @@
+{
+  "name": "bluefin-link",
+  "version": "0.0.1",
+  "description": "A better interface for postgesql queries",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "pg": "~6.2.4"
+  },
+  "devDependencies": {
+    "ava": "~0.19.1",
+    "sinon": "~2.3.4"
+  },
+  "ava": {
+    "files": [
+      "test/*.js"
+    ],
+    "source": [
+      "src/*.js"
+    ]
+  }
+}
