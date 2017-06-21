@@ -20,11 +20,7 @@ class Custom {
   }
 }
 
-test.before(t => {
-  Link.useRealConnections()
-})
-
-test.serial('materializes counts as int', t => {
+test('materializes counts as int', t => {
   int8Parser = pg.types.getTypeParser(20)
   Link.parseInt8AsJsNumber()
   return db

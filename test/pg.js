@@ -8,7 +8,6 @@ const dbUrl = 'pg:///test'
 let db
 
 test.cb.before(t => {
-  Link.useRealConnections()
   db = new Link(dbUrl, __dirname, 'sql')
   pg.connect(dbUrl, (err, client, close) => {
     if (err) return t.end(err)

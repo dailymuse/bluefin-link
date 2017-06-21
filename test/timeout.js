@@ -12,7 +12,6 @@ let clock
 test.before(t => {
   clock = sinon.useFakeTimers()
   sinon.stub(pg, 'connect')
-  Link.useRealConnections()
   db = new Link(dbUrl, __dirname, 'sql')
 })
 

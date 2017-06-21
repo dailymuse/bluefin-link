@@ -2,34 +2,29 @@ const test = require('ava')
 const path = require('path')
 
 const Link = require('../src')
-let db
-
-test.before(t => {
-  db = new Link('pg:///narg', __dirname, 'sql')
-  Link.mockAllConnections()
-})
 
 test.beforeEach(t => {
-  Link.clearAllMocks()
+  t.context.mock = Link.mock()
+  t.context.db = new t.context.mock.Link('pg:///narg', __dirname, 'sql')
 })
 
 test('initializes correctly', t => {
   const queryDirectory = path.resolve(__dirname, 'sql')
-  t.is(db.url, 'pg:///narg')
-  t.is(db.directory, queryDirectory)
+  t.is(t.context.db.url, 'pg:///narg')
+  t.is(t.context.db.directory, queryDirectory)
 })
 
-test.serial('exposes existence of functions', t => {
+test('exposes existence of functions', t => {
   t.plan(1)
-  Link.mock.selectInteger = 42
-  return db.connect(c => {
+  t.context.mock.fn.selectInteger = 42
+  return t.context.db.connect(c => {
     t.true('selectInteger' in c)
   })
 })
 
-test.serial('executes value function', t => {
-  Link.mock.selectInteger = 43
-  return db
+test('executes value function', t => {
+  t.context.mock.fn.selectInteger = 43
+  return t.context.db
     .connect(c => {
       return c.selectInteger(96)
     })
@@ -38,9 +33,9 @@ test.serial('executes value function', t => {
     })
 })
 
-test.serial('executes a row function', t => {
-  Link.mock.selectIntegerAndString = {number: 42, str: 'abc'}
-  return db
+test('executes a row function', t => {
+  t.context.mock.fn.selectIntegerAndString = {number: 42, str: 'abc'}
+  return t.context.db
     .connect(c => {
       return c.selectIntegerAndString(42, 'abc')
     })
@@ -50,8 +45,8 @@ test.serial('executes a row function', t => {
     })
 })
 
-test.serial('executes a table function', t => {
-  Link.mock.selectSeries = [
+test('executes a table function', t => {
+  t.context.mock.fn.selectSeries = [
     {num: 0},
     {num: 1},
     {num: 2},
@@ -62,7 +57,7 @@ test.serial('executes a table function', t => {
     {num: 7},
     {num: 8}
   ]
-  return db
+  return t.context.db
     .connect(c => {
       return c.selectSeries(8)
     })
@@ -75,8 +70,8 @@ test.serial('executes a table function', t => {
     })
 })
 
-test.serial('executes a result function', t => {
-  Link.mock.selectResult = {
+test('executes a result function', t => {
+  t.context.mock.fn.selectResult = {
     command: 'SELECT',
     rowCount: 9,
     rows: [
@@ -92,7 +87,7 @@ test.serial('executes a result function', t => {
     ],
     fields: [{name: 'num'}]
   }
-  return db
+  return t.context.db
     .connect(c => {
       return c.selectResult(8)
     })
@@ -106,9 +101,9 @@ test.serial('executes a result function', t => {
     })
 })
 
-test.serial('executes queries in parallel', t => {
-  Link.mock.selectInteger = 3
-  return db
+test('executes queries in parallel', t => {
+  t.context.mock.fn.selectInteger = 3
+  return t.context.db
     .all(
       c => c.selectInteger(1),
       c => c.selectInteger(1),
@@ -121,17 +116,18 @@ test.serial('executes queries in parallel', t => {
     })
 })
 
-test.serial('executes queries in a transaction', t => {
-  Link.mock.insertN = t => {}
-  Link.mock.zeroN = t => {}
-  Link.mock.sumN = 42
+test('executes queries in a transaction', t => {
+  const {mock, db} = t.context
+  mock.fn.insertN = t => {}
+  mock.fn.zeroN = t => {}
+  mock.fn.sumN = 42
   return db.txn(one => {
     return one
       .insertN(42)
-      .then(t => {
+      .then(() => {
         return db.txn(two => two.zeroN())
       })
-      .then(t => {
+      .then(() => {
         return one.sumN()
       })
       .then(sum => {
@@ -140,12 +136,12 @@ test.serial('executes queries in a transaction', t => {
   })
 })
 
-test.serial('automatically rolls back transactions', t => {
-  Link.mock.selectInteger = 2
-  Link.mock.error = t => {
+test('automatically rolls back transactions', t => {
+  t.context.mock.fn.selectInteger = 2
+  t.context.mock.fn.error = t => {
     throw new Error('column "this_column_doesnt_exist" does not exist')
   }
-  return db
+  return t.context.db
     .txn(c => {
       return c
         .error()
@@ -165,41 +161,41 @@ test.serial('automatically rolls back transactions', t => {
     })
 })
 
-test.serial('rejects a table mock that is not an array', t => {
-  Link.mock.selectSeries = 42
-  return db.connect(sql => sql.selectSeries(8)).catch(e => {
+test('rejects a table mock that is not an array', t => {
+  t.context.mock.fn.selectSeries = 42
+  return t.context.db.connect(sql => sql.selectSeries(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'mock does not return a table')
   })
 })
 
-test.serial('rejects a table mock that does not contain rows', t => {
-  Link.mock.selectSeries = [42]
-  return db.connect(sql => sql.selectSeries(8)).catch(e => {
+test('rejects a table mock that does not contain rows', t => {
+  t.context.mock.fn.selectSeries = [42]
+  return t.context.db.connect(sql => sql.selectSeries(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'mock does not return rows')
   })
 })
 
-test.serial('rejects a row mock that does not return a row', t => {
-  Link.mock.selectIntegerAndString = 42
-  return db.connect(sql => sql.selectIntegerAndString(8)).catch(e => {
+test('rejects a row mock that does not return a row', t => {
+  t.context.mock.fn.selectIntegerAndString = 42
+  return t.context.db.connect(sql => sql.selectIntegerAndString(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'mock does not return a row')
   })
 })
 
-test.serial('rejects a row mock that returns a row with no columns', t => {
-  Link.mock.selectIntegerAndString = {}
-  return db.connect(sql => sql.selectIntegerAndString(8)).catch(e => {
+test('rejects a row mock that returns a row with no columns', t => {
+  t.context.mock.fn.selectIntegerAndString = {}
+  return t.context.db.connect(sql => sql.selectIntegerAndString(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'mock row should have at least one column')
   })
 })
 
-test.serial('accepts a undefined mock row', t => {
-  Link.mock.selectIntegerAndString = undefined
-  return db
+test('accepts a undefined mock row', t => {
+  t.context.mock.fn.selectIntegerAndString = undefined
+  return t.context.db
     .connect(sql => sql.selectIntegerAndString(8))
     .then(
       row => t.true(row === undefined),
@@ -207,11 +203,11 @@ test.serial('accepts a undefined mock row', t => {
     )
 })
 
-test.serial('includes the error name and message in the stack', t => {
-  Link.mock.semanticError = () => {
+test('includes the error name and message in the stack', t => {
+  t.context.mock.fn.semanticError = () => {
     throw new Error('whiffle')
   }
-  return db.connect(sql => sql.semanticError()).catch(e => {
+  return t.context.db.connect(sql => sql.semanticError()).catch(e => {
     t.regex(e.stack, /^QueryFailed: Mock semanticError\(\) threw error\n/)
     t.regex(e.cause().stack, /^Error: whiffle\n/)
   })

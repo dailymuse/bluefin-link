@@ -1,6 +1,5 @@
 'use strict'
 
-const EventEmitter = require('events')
 const Promise = require('bluebird')
 
 const BaseStrategy = require('./base')
@@ -9,6 +8,11 @@ const log = require('./log')
 const time = require('./time')
 
 class MockStrategy extends BaseStrategy {
+  constructor (url, directory, mocks) {
+    super(url, directory)
+    this.mocks = mocks
+  }
+
   createDisposer () {
     var id
     return this.genId()
@@ -26,6 +30,7 @@ class MockStrategy extends BaseStrategy {
   createMethod (name, meta, text) {
     const log = this.createLogQueryFn(meta)
     const checkResult = this.createCheckResultFn(meta)
+    const mocks = this.mocks
     const method = function () {
       const elapsed = time.start()
       const parameters = [...arguments]
@@ -34,12 +39,11 @@ class MockStrategy extends BaseStrategy {
       Error.captureStackTrace(context, method)
 
       // make sure we have a mock for this query
-      if (!(name in MockStrategy.mock)) {
+      if (!(name in mocks)) {
         throw new Error(`no mock for method ${name}`)
       }
 
-      // set up the mock
-      const mock = MockStrategy.mock[name]
+      const mock = mocks[name]
 
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
@@ -114,11 +118,9 @@ class MockStrategy extends BaseStrategy {
   }
 }
 
-MockStrategy.mock = {}
-
 class MockNotifier {
-  constructor (url) {
-    this._emitter = new EventEmitter()
+  constructor (emitter) {
+    this._emitter = emitter
   }
 
   close () {}

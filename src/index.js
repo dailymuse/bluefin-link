@@ -1,5 +1,6 @@
 'use strict'
 
+const EventEmitter = require('events')
 const fs = require('fs')
 const path = require('path')
 const Promise = require('bluebird')
@@ -8,7 +9,14 @@ const pg = require('pg')
 const {MockStrategy, MockNotifier} = require('./mock.js')
 const {PgStrategy, PgNotifier} = require('./pg.js')
 
-const instances = []
+const checkLinkArgs = (url, segments, cb) => {
+  if (url === undefined) throw new Error('No url specified')
+  if (segments.length < 1) throw new Error('No query directory specified')
+
+  const directory = path.resolve.apply(path, segments)
+  fs.accessSync(directory, fs.R_OK)
+  return directory
+}
 
 class Link {
   static parseInt8AsJsNumber () {
@@ -18,53 +26,9 @@ class Link {
     pg.types.setTypeParser(20, parseInt)
   }
 
-  static useRealConnections () {
-    for (let i of instances) {
-      i.adoptStrategy(PgStrategy)
-      i.adoptNotifier(PgNotifier)
-    }
-    delete this.mock
-  }
-
-  static mockAllConnections () {
-    for (let i of instances) {
-      i.adoptStrategy(MockStrategy)
-      i.adoptNotifier(MockNotifier)
-    }
-    this.mock = MockStrategy.mock
-  }
-
-  static clearAllMocks () {
-    this.mock = MockStrategy.mock = {}
-  }
-
-  static testWithMocks () {
-    before(() => {
-      this.mockAllConnections()
-    })
-
-    beforeEach(() => {
-      this.clearAllMocks()
-    })
-  }
-
-  constructor (url) {
-    if (url === undefined) throw new Error('No Link specified')
-    if (arguments.length < 2) throw new Error('No query directory specified')
-
-    const args = Array.prototype.slice.call(arguments, 1)
-    const directory = path.resolve.apply(path, args)
-    fs.accessSync(directory, fs.R_OK)
-
-    if (Link.mock) {
-      this.strategy = new MockStrategy(url, directory)
-      this.notifier = new MockNotifier(url)
-    } else {
-      this.strategy = new PgStrategy(url, directory)
-      this.notifier = new PgNotifier(url)
-    }
-
-    instances.push(this)
+  constructor (strategy, notifier) {
+    this.strategy = strategy
+    this.notifier = notifier
   }
 
   get url () {
@@ -73,15 +37,6 @@ class Link {
 
   get directory () {
     return this.strategy.directory
-  }
-
-  adoptStrategy (Strategy) {
-    this.strategy = new Strategy(this.url, this.directory)
-  }
-
-  adoptNotifier (Notifier) {
-    if (this.notifier) this.notifier.close()
-    this.notifier = new Notifier(this.url)
   }
 
   connect (fn) {
@@ -111,6 +66,17 @@ class Link {
   }
 }
 
+class PgLink extends Link {
+  constructor (url, ...segments) {
+    const directory = checkLinkArgs(url, segments)
+    super(new PgStrategy(url, directory), new PgNotifier(url))
+  }
+
+  static mock () {
+    return new MockingScope()
+  }
+}
+
 class Handler {
   constructor (strategy) {
     this.strategy = strategy
@@ -130,4 +96,19 @@ class Handler {
   }
 }
 
-module.exports = Link
+class MockingScope {
+  constructor () {
+    const fn = (this.fn = {})
+    this.emitter = new EventEmitter()
+    this.Link = class extends Link {
+      constructor (url, ...segments) {
+        const directory = checkLinkArgs(url, segments)
+        const strategy = new MockStrategy(url, directory, fn)
+        const notifier = new MockNotifier(url)
+        super(strategy, notifier)
+      }
+    }
+  }
+}
+
+module.exports = PgLink
