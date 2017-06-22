@@ -5,16 +5,14 @@ const fs = require('fs')
 const path = require('path')
 const Promise = require('bluebird')
 
-const log = require('./log')
-
 class BaseStrategy {
   constructor (url, directory) {
     this.url = url
     this.directory = directory
     this.methods = {
-      begin: this.createTxnMethod('BEGIN'),
-      commit: this.createTxnMethod('COMMIT'),
-      rollback: this.createTxnMethod('ROLLBACK')
+      begin: this.createTxnMethod('begin'),
+      commit: this.createTxnMethod('commit'),
+      rollback: this.createTxnMethod('rollback')
     }
   }
 
@@ -66,13 +64,13 @@ class BaseStrategy {
 
   createLogQueryFn (meta) {
     const data = Object.assign({}, meta)
-    return (id, elapsed, parameters) => {
+    return (id, elapsed, args) => {
       data['connection-id'] = id
       data.ms = elapsed()
-      data.parameters = parameters.map(
+      data.arguments = args.map(
         p => (Buffer.isBuffer(p) ? '\\x' + p.toString('hex') : p)
       )
-      log.info('query', data)
+      this.log.info('query', data)
     }
   }
 }

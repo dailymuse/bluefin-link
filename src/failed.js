@@ -7,22 +7,46 @@ function instantiate (message, cause, context, name = 'Error') {
   if (context) {
     e.context = context
     if ('stack' in context) {
-      e.stack = context.stack.replace('Error', `${name}: ${e.message}`)
+      e.stack = context.stack.replace(
+        /(Error)|(\[object Object\])/,
+        `${name}: ${e.message}`
+      )
       delete e.context.stack
     }
   }
   return e
 }
 
-function wrap (message) {
-  return (cause, context) => instantiate(message, cause, context)
+module.exports.query = (pgError, context) => {
+  const cause = new Error(pgError.message)
+  cause.cause = () => undefined
+  cause.stack = pgError.stack
+  cause.context = {}
+  Object.keys(pgError).forEach(k => {
+    if (pgError[k]) cause.context[k] = pgError[k]
+  })
+  delete cause.context.name
+  return instantiate(pgError.message, cause, context, 'QueryFailed')
 }
 
-function rename (name) {
-  return (message, cause, context) => instantiate(message, cause, context, name)
+module.exports.mock = (name, mockError, context) => {
+  mockError.cause = () => undefined
+  return instantiate(
+    `Mock ${name}() threw error`,
+    mockError,
+    context,
+    'QueryFailed'
+  )
 }
 
-module.exports.listen = wrap('Listen failed')
-module.exports.notify = wrap('Notify failed')
-module.exports.query = rename('QueryFailed')
-module.exports.unlisten = wrap('Unlisten failed')
+module.exports.result = (message, result, context) => {
+  const cause = new Error(message)
+  cause.cause = () => undefined
+  cause.context = {result}
+  return instantiate(
+    'incorrect result from mock',
+    cause,
+    context,
+    'QueryFailed'
+  )
+}

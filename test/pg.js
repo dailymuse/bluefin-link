@@ -35,6 +35,6 @@ test('error has correct information', t => {
 
     const c = e.cause()
     t.is(c.message, 'invalid reference to FROM-clause entry for table "x"')
-    t.is(typeof c.hint, 'string')
+    t.is(typeof c.context.hint, 'string')
   })
 })

@@ -5,7 +5,6 @@ const EventEmitter = require('events')
 const pg = require('pg')
 
 const failed = require('./failed')
-const log = require('./log')
 const time = require('./time')
 const BaseStrategy = require('./base')
 
@@ -36,13 +35,13 @@ class PgStrategy extends BaseStrategy {
       close = _close
 
       const ms = connectTimeMs()
-      log.info('pg connected', this.desc({'connection-id': id, ms}))
+      this.log.info('pg connected', this.desc({'connection-id': id, ms}))
 
       txnTimeMs = time.start()
-      return {_id, _client}
+      return {_id, _client, _log: this.log}
     }).disposer(() => {
       const ms = txnTimeMs()
-      log.info('pg disconnecting', {'connection-id': id, ms})
+      this.log.info('pg disconnecting', {'connection-id': id, ms})
       if (close) close()
     })
   }
@@ -80,13 +79,12 @@ class PgStrategy extends BaseStrategy {
       const context = {arguments: args}
       Object.assign(context, meta)
       Error.captureStackTrace(context, method)
-
       return new Promise((resolve, reject) => {
         const query = this._client.query(text, args)
 
         query.on('error', pgError => {
-          var e = failed.query(pgError.message, pgError, context)
-          log.error(e)
+          var e = failed.query(pgError, context)
+          this._log.error(e)
           reject(e)
         })
 
@@ -105,7 +103,7 @@ class PgStrategy extends BaseStrategy {
     const msg = sql.toLowerCase()
     return function () {
       return new Promise((resolve, reject) => {
-        log.info(msg, {'connection-id': this._id})
+        this._log.info(msg, {'connection-id': this._id})
         this._client.query(sql, err => {
           if (err) {
             reject(err)

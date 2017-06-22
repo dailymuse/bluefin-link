@@ -4,7 +4,6 @@ const Promise = require('bluebird')
 
 const BaseStrategy = require('./base')
 const failed = require('./failed')
-const log = require('./log')
 const time = require('./time')
 
 class MockStrategy extends BaseStrategy {
@@ -18,18 +17,18 @@ class MockStrategy extends BaseStrategy {
     return this.genId()
       .then(_id => {
         id = _id
-        log.info('mock connected', this.desc({'connection-id': id}))
-        return {_id: id}
+        this.log.info('mock connected', this.desc({'connection-id': id}))
+        return {_id: id, _log: this.log}
       })
       .disposer(() => {
         // no actual resources to clean up
-        log.info('mock disconnnecting', {'connection-id': id})
+        this.log.info('mock disconnnecting', {'connection-id': id})
       })
   }
 
   createMethod (name, meta, text) {
-    const log = this.createLogQueryFn(meta)
-    const checkResult = this.createCheckResultFn(meta)
+    const logQuery = this.createLogQueryFn(meta)
+    const checkResult = this.createCheckResultFn(name, meta)
     const mocks = this.mocks
     const method = function () {
       const elapsed = time.start()
@@ -48,16 +47,13 @@ class MockStrategy extends BaseStrategy {
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
           let result = mock
-          log(this._id, elapsed, args)
+          logQuery(this._id, elapsed, args)
           if (typeof mock === 'function') {
             try {
               result = mock.apply(this, args)
             } catch (mockError) {
-              var e = failed.query(
-                `Mock ${name}() threw error`,
-                mockError,
-                context
-              )
+              var e = failed.mock(name, mockError, context)
+              this._log.error(e)
               return reject(e)
             }
           }
@@ -68,10 +64,14 @@ class MockStrategy extends BaseStrategy {
     return method
   }
 
-  createCheckResultFn (meta) {
+  createCheckResultFn (name, meta) {
+    const log = this.log
     return function (result, context, resolve, reject) {
-      const fail = msg =>
-        reject(failed.query(msg, new Error('Result check failed'), context))
+      const fail = msg => {
+        const e = failed.result(msg, result, context)
+        log.error(e)
+        reject(e)
+      }
 
       if (meta.return === 'table') {
         if (!(result instanceof Array)) {
@@ -106,9 +106,8 @@ class MockStrategy extends BaseStrategy {
   }
 
   createTxnMethod (sql) {
-    const msg = sql.toLowerCase()
     return function () {
-      log.info(msg, {'connection-id': this._id})
+      this._log.info(sql, {'connection-id': this._id})
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
           resolve()

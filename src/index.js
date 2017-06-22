@@ -1,11 +1,11 @@
 'use strict'
 
-const EventEmitter = require('events')
 const fs = require('fs')
 const path = require('path')
 const Promise = require('bluebird')
 const pg = require('pg')
 
+const DebugLog = require('./log')
 const MockStrategy = require('./mock.js')
 const PgStrategy = require('./pg.js')
 
@@ -26,8 +26,13 @@ class Link {
     pg.types.setTypeParser(20, parseInt)
   }
 
+  static mock () {
+    return new MockingScope()
+  }
+
   constructor (strategy) {
     this.strategy = strategy
+    if (!('log' in strategy)) strategy.log = this.constructor.log
   }
 
   get url () {
@@ -65,14 +70,12 @@ class Link {
   }
 }
 
+Link.log = new DebugLog()
+
 class PgLink extends Link {
   constructor (url, ...segments) {
     const directory = checkLinkArgs(url, segments)
     super(new PgStrategy(url, directory))
-  }
-
-  static mock () {
-    return new MockingScope()
   }
 }
 
@@ -98,7 +101,6 @@ class Handler {
 class MockingScope {
   constructor () {
     const fn = (this.fn = {})
-    this.emitter = new EventEmitter()
     this.Link = class extends Link {
       constructor (url, ...segments) {
         const directory = checkLinkArgs(url, segments)
