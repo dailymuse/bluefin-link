@@ -76,13 +76,13 @@ class PgStrategy extends BaseStrategy {
     const logQuery = this.createLogQueryFn(meta)
     const method = function () {
       const elapsed = time.start()
-      const parameters = [...arguments].map(format)
-      const context = {parameters}
+      const args = [...arguments].map(format)
+      const context = {arguments: args}
       Object.assign(context, meta)
       Error.captureStackTrace(context, method)
 
       return new Promise((resolve, reject) => {
-        const query = this._client.query(text, parameters)
+        const query = this._client.query(text, args)
 
         query.on('error', pgError => {
           var e = failed.query(pgError.message, pgError, context)
@@ -93,7 +93,7 @@ class PgStrategy extends BaseStrategy {
         query.on('row', (row, result) => result.addRow(row))
 
         query.on('end', result => {
-          logQuery(this._id, elapsed, parameters)
+          logQuery(this._id, elapsed, args)
           resolve(end(result))
         })
       })

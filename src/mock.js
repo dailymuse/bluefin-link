@@ -33,8 +33,8 @@ class MockStrategy extends BaseStrategy {
     const mocks = this.mocks
     const method = function () {
       const elapsed = time.start()
-      const parameters = [...arguments]
-      const context = {parameters}
+      const args = [...arguments]
+      const context = {arguments: args}
       Object.assign(context, meta)
       Error.captureStackTrace(context, method)
 
@@ -48,10 +48,10 @@ class MockStrategy extends BaseStrategy {
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
           let result = mock
-          log(this._id, elapsed, parameters)
+          log(this._id, elapsed, args)
           if (typeof mock === 'function') {
             try {
-              result = mock.apply(this, parameters)
+              result = mock.apply(this, args)
             } catch (mockError) {
               var e = failed.query(
                 `Mock ${name}() threw error`,

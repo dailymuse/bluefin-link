@@ -1,151 +1,40 @@
 const test = require('ava')
-const pg = require('pg')
+const {Client} = require('pg')
 const path = require('path')
 
 const Link = require('../src')
+const common = require('./lib/common')
 
 const dbUrl = 'pg:///test'
+const sourceDir = path.join(__dirname, 'sql')
+
 let db
+const client = new Client(dbUrl)
 
-test.cb.before(t => {
+test.before(t => {
   db = new Link(dbUrl, __dirname, 'sql')
-  pg.connect(dbUrl, (err, client, close) => {
-    if (err) return t.end(err)
-    client.query(
-      'CREATE TABLE IF NOT EXISTS _database_test (n integer)',
-      err => {
-        if (err) return t.end(err)
-        close()
-        t.end()
-      }
-    )
-  })
+  client.connect()
+  return client.query('CREATE TABLE IF NOT EXISTS _database_test (n integer)')
 })
 
-test.cb.after(t => {
-  pg.connect(dbUrl, (err, client, close) => {
-    if (err) return t.end(err)
-    client.query('DROP TABLE _database_test', err => {
-      if (err) return t.end(err)
-      close()
-      t.end()
-    })
-  })
+test.after(t => {
+  return client.query('DROP TABLE _database_test').then(() => client.end())
 })
 
-test('pg initializes correctly', t => {
-  const queryDirectory = path.resolve(__dirname, 'sql')
-  t.is(db.url, dbUrl)
-  t.is(db.directory, queryDirectory)
+test.beforeEach(t => {
+  t.context.db = db
+  t.context.mock = {fn: {}} // stub mocking context
 })
 
-test('pg exposes existence of functions', t => {
-  return db.connect(c => {
-    t.true('selectInteger' in c)
-  })
-})
+common(test)
 
-test('pg executes value function', t => {
-  return db
-    .connect(c => {
-      return c.selectInteger(42)
-    })
-    .then(i => {
-      t.is(i, 42)
-    })
-})
-
-test('pg executes a row function', t => {
-  return db
-    .connect(c => {
-      return c.selectIntegerAndString(42, 'abc')
-    })
-    .then(r => {
-      t.is(r.number, 42)
-      t.is(r.str, 'abc')
-    })
-})
-
-test('pg executes a table function', t => {
-  return db
-    .connect(c => {
-      return c.selectSeries(8)
-    })
-    .then(rows => {
-      t.true(Array.isArray(rows))
-      t.is(rows.length, 9)
-      for (let i = 0; i < 9; i++) {
-        t.is(rows[i].num, i)
-      }
-    })
-})
-
-test('pg executes a result function', t => {
-  return db
-    .connect(c => {
-      return c.selectResult(8)
-    })
-    .then(result => {
-      t.is(result.command, 'SELECT')
-      t.is(result.rowCount, 9)
-      t.true(Array.isArray(result.rows))
-      t.is(result.rows.length, 9)
-      t.true(Array.isArray(result.fields))
-      t.is(result.fields.length, 1)
-    })
-})
-
-test('pg executes queries in parallel', t => {
-  return db
-    .all(
-      c => c.selectInteger(1),
-      c => c.selectInteger(2),
-      c => c.selectInteger(3),
-      c => c.selectInteger(4)
-    )
-    .spread((one, two, three, four) => {
-      t.is(one, 1)
-      t.is(two, 2)
-      t.is(three, 3)
-      t.is(four, 4)
-    })
-})
-
-test('pg executes queries in a transaction', t => {
-  return db.txn(one => {
-    return one
-      .insertN(42)
-      .then(() => {
-        return db.txn(two => two.zeroN())
-      })
-      .then(() => {
-        return one.sumN()
-      })
-      .then(sum => {
-        t.is(sum, 42)
-      })
-  })
-})
-
-test('pg automatically rolls back transactions', t => {
-  return db
-    .txn(c => {
-      return c
-        .error()
-        .then(() => {
-          return c.selectInteger(2)
-        })
-        .then(i => {
-          t.fail('should have thrown an exception')
-        })
-    })
-    .catch(e => {
-      t.is(e.message, 'column "this_column_does_not_exist" does not exist')
-    })
-})
-
-test('pg includes the error name and message in the stack', t => {
-  return db.connect(sql => sql.semanticError()).catch(e => {
+test('error has correct information', t => {
+  return db.connect(c => c.errorWithArguments(42, 21, 96)).catch(e => {
+    t.is(e.message, 'invalid reference to FROM-clause entry for table "x"')
     t.regex(e.stack, /^QueryFailed: invalid reference/)
+
+    const c = e.cause()
+    t.is(c.message, 'invalid reference to FROM-clause entry for table "x"')
+    t.is(typeof c.hint, 'string')
   })
 })
