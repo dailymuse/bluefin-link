@@ -6,8 +6,8 @@ const path = require('path')
 const Promise = require('bluebird')
 const pg = require('pg')
 
-const {MockStrategy, MockNotifier} = require('./mock.js')
-const {PgStrategy, PgNotifier} = require('./pg.js')
+const MockStrategy = require('./mock.js')
+const PgStrategy = require('./pg.js')
 
 const checkLinkArgs = (url, segments, cb) => {
   if (url === undefined) throw new Error('No url specified')
@@ -26,9 +26,8 @@ class Link {
     pg.types.setTypeParser(20, parseInt)
   }
 
-  constructor (strategy, notifier) {
+  constructor (strategy) {
     this.strategy = strategy
-    this.notifier = notifier
   }
 
   get url () {
@@ -69,7 +68,7 @@ class Link {
 class PgLink extends Link {
   constructor (url, ...segments) {
     const directory = checkLinkArgs(url, segments)
-    super(new PgStrategy(url, directory), new PgNotifier(url))
+    super(new PgStrategy(url, directory))
   }
 
   static mock () {
@@ -104,8 +103,7 @@ class MockingScope {
       constructor (url, ...segments) {
         const directory = checkLinkArgs(url, segments)
         const strategy = new MockStrategy(url, directory, fn)
-        const notifier = new MockNotifier(url)
-        super(strategy, notifier)
+        super(strategy)
       }
     }
   }
