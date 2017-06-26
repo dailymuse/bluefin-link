@@ -61,9 +61,23 @@ test('includes the error name and message in the stack', t => {
   mock.fn.errorWithArguments = () => {
     throw new Error('whiffle')
   }
-  return db.connect(c => c.errorWithArguments(42, 21, 96)).catch(e => {
+  return db.connect(sql => sql.errorWithArguments(42, 21, 96)).catch(e => {
     t.is(e.message, 'Mock errorWithArguments() threw error')
     t.regex(e.stack, /^QueryFailed: Mock errorWithArguments\(\) threw error/)
     t.regex(e.cause().stack, /^Error: whiffle\n/)
   })
+})
+
+test('clears mocks', t => {
+  const {mock, db} = t.context
+  mock.fn.nurp = () => {
+    t.fail('should never be called')
+  }
+  mock.clearMocks()
+  return db
+    .connect(sql => sql.nurp())
+    .then(
+      () => t.fail('the promise must be rejected'),
+      e => t.is(e.message, 'sql.nurp is not a function')
+    )
 })

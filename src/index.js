@@ -107,6 +107,12 @@ class MockingScope {
       }
     }
   }
+
+  clearMocks () {
+    for (let name of Object.keys(this.fn)) {
+      delete this.fn[name]
+    }
+  }
 }
 
 module.exports = PgLink
