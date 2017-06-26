@@ -93,15 +93,11 @@ class PgStrategy extends BaseStrategy {
 module.exports = PgStrategy
 
 function format (v) {
-  if (v instanceof Array) {
-    return v.map(format)
-  } else if (v instanceof Buffer) {
-    return '\\x' + v.toString('hex')
-  } else if (typeof v.toSql === 'function') {
-    return v.toSql()
-  } else {
-    return v
-  }
+  if (v === null || v === undefined) return null
+  else if (v instanceof Array) return v.map(format)
+  else if (v instanceof Buffer) return '\\x' + v.toString('hex')
+  else if (typeof v.toSql === 'function') return format(v.toSql())
+  else return v
 }
 
 const pools = {}
