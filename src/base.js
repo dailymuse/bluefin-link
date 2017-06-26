@@ -54,12 +54,9 @@ class BaseStrategy {
   }
 
   genId () {
-    return new Promise((resolve, reject) => {
-      crypto.randomBytes(3, (err, buf) => {
-        if (err) return reject(err)
-        resolve(buf.toString('hex'))
-      })
-    })
+    return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf =>
+      buf.toString('hex')
+    )
   }
 
   createLogQueryFn (meta) {

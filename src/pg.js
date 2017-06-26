@@ -10,39 +10,24 @@ const BaseStrategy = require('./base')
 
 class PgStrategy extends BaseStrategy {
   createDisposer () {
-    var close
-    var id
     var txnTimeMs
 
     const connectTimeMs = time.start()
     const idvow = this.genId()
-    const cvow = new Promise((resolve, reject) => {
-      pg.connect(this.url, (err, client, done) => {
-        if (err) reject(err)
-        resolve([client, done])
-      })
-    })
+    const pool = getPool(this.url)
+    const cvow = pool
+      .connect()
       .timeout(30000, 'Timed out attempting to connect to database')
-      .catch(e => {
-        if (e.message === 'Timed out attempting to connect to database') {
-          pg.end()
-        }
-        return Promise.reject(e)
-      })
 
-    return Promise.join(idvow, cvow, (_id, [_client, _close]) => {
-      id = _id
-      close = _close
-
+    return Promise.join(idvow, cvow, (_id, _client) => {
       const ms = connectTimeMs()
-      this.log.info('pg connected', this.desc({'connection-id': id, ms}))
-
+      this.log.info('pg connected', this.desc({'connection-id': _id, ms}))
       txnTimeMs = time.start()
       return {_id, _client, _log: this.log}
-    }).disposer(() => {
+    }).disposer(connection => {
       const ms = txnTimeMs()
-      this.log.info('pg disconnecting', {'connection-id': id, ms})
-      if (close) close()
+      this.log.info('pg disconnecting', {'connection-id': connection.id, ms})
+      connection._client.release()
     })
   }
 
@@ -71,7 +56,7 @@ class PgStrategy extends BaseStrategy {
     return this.createMethodWithCallback(name, meta, text, fn)
   }
 
-  createMethodWithCallback (name, meta, text, end) {
+  createMethodWithCallback (name, meta, text, extract) {
     const logQuery = this.createLogQueryFn(meta)
     const method = function () {
       const elapsed = time.start()
@@ -79,39 +64,28 @@ class PgStrategy extends BaseStrategy {
       const context = {arguments: args}
       Object.assign(context, meta)
       Error.captureStackTrace(context, method)
-      return new Promise((resolve, reject) => {
-        const query = this._client.query(text, args)
-
-        query.on('error', pgError => {
+      return this._client
+        .query(text, args)
+        .then(result => {
+          logQuery(this._id, elapsed, args)
+          return extract(result)
+        })
+        .catch(pgError => {
           var e = failed.query(pgError, context)
           this._log.error(e)
-          reject(e)
+          throw e
         })
-
-        query.on('row', (row, result) => result.addRow(row))
-
-        query.on('end', result => {
-          logQuery(this._id, elapsed, args)
-          resolve(end(result))
-        })
-      })
     }
     return method
   }
 
   createTxnMethod (sql) {
-    const msg = sql.toLowerCase()
+    // In pg 6.x and earlier, query returns a hybrid promise/emitter object.
+    // We want to return a proper bluebird promise, so create it via a callback.
+    // We'll be able to remove this when we upgrade to pg 7.0
     return function () {
-      return new Promise((resolve, reject) => {
-        this._log.info(msg, {'connection-id': this._id})
-        this._client.query(sql, err => {
-          if (err) {
-            reject(err)
-          } else {
-            resolve()
-          }
-        })
-      })
+      this._log.info(sql, {'connection-id': this._id})
+      return Promise.fromCallback(cb => this._client.query(sql, cb))
     }
   }
 }
@@ -128,4 +102,12 @@ function format (v) {
   } else {
     return v
   }
+}
+
+const pools = {}
+function getPool (url) {
+  if (url in pools) return pools[url]
+  const p = new pg.Pool({connectionString: url, Promise})
+  pools[url] = p
+  return p
 }
