@@ -19,7 +19,6 @@ function instantiate (message, cause, context, name = 'Error') {
 
 module.exports.query = (pgError, context) => {
   const cause = new Error(pgError.message)
-  cause.cause = () => undefined
   cause.stack = pgError.stack
   cause.context = {}
   Object.keys(pgError).forEach(k => {
@@ -30,7 +29,6 @@ module.exports.query = (pgError, context) => {
 }
 
 module.exports.mock = (name, mockError, context) => {
-  mockError.cause = () => undefined
   return instantiate(
     `Mock ${name}() threw error`,
     mockError,
@@ -41,7 +39,6 @@ module.exports.mock = (name, mockError, context) => {
 
 module.exports.result = (message, result, context) => {
   const cause = new Error(message)
-  cause.cause = () => undefined
   cause.context = {result}
   return instantiate(
     'incorrect result from mock',

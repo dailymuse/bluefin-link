@@ -7,9 +7,11 @@ class DebugLog {
   }
 
   error (error) {
-    for (let e = error; e; e = e.cause()) {
+    let e = error
+    while (e) {
       if (e.context) debug('%s %o', e.name, e.context)
       debug('%s', e.stack)
+      e = typeof e.cause === 'function' ? e.cause() : e.cause
     }
   }
 }
