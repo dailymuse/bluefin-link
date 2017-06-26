@@ -12,7 +12,7 @@ class MockStrategy extends BaseStrategy {
     this.mocks = mocks
   }
 
-  createDisposer () {
+  connect () {
     var id
     return this.genId()
       .then(_id => {

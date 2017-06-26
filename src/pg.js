@@ -9,7 +9,7 @@ const time = require('./time')
 const BaseStrategy = require('./base')
 
 class PgStrategy extends BaseStrategy {
-  createDisposer () {
+  connect () {
     var txnTimeMs
 
     const connectTimeMs = time.start()

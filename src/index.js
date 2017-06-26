@@ -1,5 +1,3 @@
-'use strict'
-
 const fs = require('fs')
 const path = require('path')
 const Promise = require('bluebird')
@@ -44,10 +42,10 @@ class Link {
   }
 
   connect (fn) {
-    const disposer = this.strategy.createDisposer()
-    return Promise.using(disposer, target => {
+    const disposer = this.strategy.connect()
+    return Promise.using(disposer, connection => {
       const handler = new Handler(this.strategy)
-      const proxy = new Proxy(target, handler)
+      const proxy = new Proxy(connection, handler)
       return fn(proxy)
     })
   }
