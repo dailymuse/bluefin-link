@@ -61,6 +61,7 @@ class PgStrategy extends BaseStrategy {
     const method = function () {
       const elapsed = time.start()
       const args = [...arguments].map(format)
+      debugger
       const context = {arguments: args}
       Object.assign(context, meta)
       Error.captureStackTrace(context, method)

@@ -71,6 +71,24 @@ class Link {
 Link.log = new DebugLog()
 
 class PgLink extends Link {
+  static mock () {
+    const MockLink = class extends Link {
+      static clearMocks () {
+        for (let name of Object.keys(this.fn)) {
+          delete this.fn[name]
+        }
+      }
+
+      constructor (url, ...segments) {
+        const directory = checkLinkArgs(url, segments)
+        const strategy = new MockStrategy(url, directory, MockLink.fn)
+        super(strategy)
+      }
+    }
+    MockLink.fn = {}
+    return MockLink
+  }
+
   constructor (url, ...segments) {
     const directory = checkLinkArgs(url, segments)
     super(new PgStrategy(url, directory))
@@ -93,25 +111,6 @@ class Handler {
     if (name in target) return target[name]
     if (name in this.strategy.methods) return this.strategy.methods[name]
     return this.strategy.create(name)
-  }
-}
-
-class MockingScope {
-  constructor () {
-    const fn = (this.fn = {})
-    this.Link = class extends Link {
-      constructor (url, ...segments) {
-        const directory = checkLinkArgs(url, segments)
-        const strategy = new MockStrategy(url, directory, fn)
-        super(strategy)
-      }
-    }
-  }
-
-  clearMocks () {
-    for (let name of Object.keys(this.fn)) {
-      delete this.fn[name]
-    }
   }
 }
 
