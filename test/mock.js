@@ -3,14 +3,14 @@ const Link = require('../src')
 const common = require('./lib/common')
 
 test.beforeEach(t => {
-  t.context.mock = Link.mock()
-  t.context.db = new t.context.mock.Link('pg:///test', __dirname, 'sql')
+  t.context.Link = Link.mock()
+  t.context.db = new t.context.Link('pg:///test', __dirname, 'sql')
 })
 
 common(test)
 
 test('rejects a table mock that is not an array', t => {
-  t.context.mock.fn.selectSeries = 42
+  t.context.Link.fn.selectSeries = 42
   return t.context.db.connect(sql => sql.selectSeries(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'incorrect result from mock')
@@ -20,7 +20,7 @@ test('rejects a table mock that is not an array', t => {
 })
 
 test('rejects a table mock that does not contain rows', t => {
-  t.context.mock.fn.selectSeries = [42]
+  t.context.Link.fn.selectSeries = [42]
   return t.context.db.connect(sql => sql.selectSeries(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'incorrect result from mock')
@@ -30,7 +30,7 @@ test('rejects a table mock that does not contain rows', t => {
 })
 
 test('rejects a row mock that does not return a row', t => {
-  t.context.mock.fn.selectIntegerAndString = 42
+  t.context.Link.fn.selectIntegerAndString = 42
   return t.context.db.connect(sql => sql.selectIntegerAndString(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'incorrect result from mock')
@@ -40,7 +40,7 @@ test('rejects a row mock that does not return a row', t => {
 })
 
 test('rejects a row mock that returns a row with no columns', t => {
-  t.context.mock.fn.selectIntegerAndString = {}
+  t.context.Link.fn.selectIntegerAndString = {}
   return t.context.db.connect(sql => sql.selectIntegerAndString(8)).catch(e => {
     t.is(e.name, 'QueryFailed')
     t.is(e.message, 'incorrect result from mock')
@@ -50,15 +50,15 @@ test('rejects a row mock that returns a row with no columns', t => {
 })
 
 test('accepts a undefined mock row', t => {
-  t.context.mock.fn.selectIntegerAndString = undefined
+  t.context.Link.fn.selectIntegerAndString = undefined
   return t.context.db
     .connect(sql => sql.selectIntegerAndString(8))
     .then(row => t.true(row === undefined))
 })
 
 test('includes the error name and message in the stack', t => {
-  const {mock, db} = t.context
-  mock.fn.errorWithArguments = () => {
+  const {db, Link} = t.context
+  Link.fn.errorWithArguments = () => {
     throw new Error('whiffle')
   }
   return db.connect(sql => sql.errorWithArguments(42, 21, 96)).catch(e => {
@@ -69,11 +69,11 @@ test('includes the error name and message in the stack', t => {
 })
 
 test('clears mocks', t => {
-  const {mock, db} = t.context
-  mock.fn.nurp = () => {
+  const {db, Link} = t.context
+  Link.fn.nurp = () => {
     t.fail('should never be called')
   }
-  mock.clearMocks()
+  Link.clearMocks()
   return db
     .connect(sql => sql.nurp())
     .then(

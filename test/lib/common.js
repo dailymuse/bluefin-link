@@ -10,14 +10,14 @@ module.exports = test => {
 
   test('exposes existence of functions', t => {
     t.plan(1)
-    t.context.mock.fn.selectInteger = 42
+    t.context.Link.fn.selectInteger = 42
     return t.context.db.connect(c => {
       t.true('selectInteger' in c)
     })
   })
 
   test('executes value function', t => {
-    t.context.mock.fn.selectInteger = 43
+    t.context.Link.fn.selectInteger = 43
     return t.context.db
       .connect(c => {
         return c.selectInteger(43)
@@ -28,7 +28,7 @@ module.exports = test => {
   })
 
   test('executes a row function', t => {
-    t.context.mock.fn.selectIntegerAndString = {number: 42, str: 'abc'}
+    t.context.Link.fn.selectIntegerAndString = {number: 42, str: 'abc'}
     return t.context.db
       .connect(c => {
         return c.selectIntegerAndString(42, 'abc')
@@ -40,7 +40,7 @@ module.exports = test => {
   })
 
   test('executes a table function', t => {
-    t.context.mock.fn.selectSeries = [
+    t.context.Link.fn.selectSeries = [
       {num: 0},
       {num: 1},
       {num: 2},
@@ -65,7 +65,7 @@ module.exports = test => {
   })
 
   test('executes a result function', t => {
-    t.context.mock.fn.selectResult = {
+    t.context.Link.fn.selectResult = {
       command: 'SELECT',
       rowCount: 9,
       rows: [
@@ -96,7 +96,7 @@ module.exports = test => {
   })
 
   test('executes queries in parallel', t => {
-    t.context.mock.fn.selectInteger = 3
+    t.context.Link.fn.selectInteger = 3
     return t.context.db
       .all(
         c => c.selectInteger(3),
@@ -111,10 +111,10 @@ module.exports = test => {
   })
 
   test('executes queries in a transaction', t => {
-    const {mock, db} = t.context
-    mock.fn.insertN = () => {}
-    mock.fn.zeroN = () => {}
-    mock.fn.sumN = 42
+    const {Link, db} = t.context
+    Link.fn.insertN = () => {}
+    Link.fn.zeroN = () => {}
+    Link.fn.sumN = 42
     return db.txn(one => {
       return one
         .insertN(42)
@@ -131,8 +131,8 @@ module.exports = test => {
   })
 
   test('automatically rolls back transactions', t => {
-    const {db, mock} = t.context
-    t.context.mock.fn.error = () => {
+    const {db, Link} = t.context
+    t.context.Link.fn.error = () => {
       throw new Error('column "this_column_doesnt_exist" does not exist')
     }
     return t.context.db
@@ -152,9 +152,9 @@ module.exports = test => {
   })
 
   test('QueryFailed includes context', t => {
-    const {mock, db} = t.context
+    const {db, Link} = t.context
 
-    mock.fn.errorWithArguments = () => {
+    Link.fn.errorWithArguments = () => {
       throw new Error('whiffle')
     }
     return db.connect(c => c.errorWithArguments(42, 21, 96)).catch(e => {

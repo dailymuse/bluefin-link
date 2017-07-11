@@ -2,7 +2,7 @@ const test = require('ava')
 const {Client} = require('pg')
 const path = require('path')
 
-const Link = require('../src')
+const PgLink = require('../src')
 const common = require('./lib/common')
 
 const dbUrl = 'pg:///test'
@@ -12,7 +12,7 @@ let db
 const client = new Client(dbUrl)
 
 test.before(t => {
-  db = new Link(dbUrl, __dirname, 'sql')
+  db = new PgLink(dbUrl, __dirname, 'sql')
   client.connect()
   return client.query('CREATE TABLE IF NOT EXISTS _database_test (n integer)')
 })
@@ -23,7 +23,7 @@ test.after(t => {
 
 test.beforeEach(t => {
   t.context.db = db
-  t.context.mock = {fn: {}} // stub mocking context
+  t.context.Link = PgLink.mock()
 })
 
 common(test)

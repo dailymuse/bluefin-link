@@ -1,6 +1,6 @@
 'use strict'
 
-function instantiate (message, cause, context, name = 'Error') {
+function fail (message, cause, context, name = 'Error') {
   const e = new Error(message)
   e.name = name
   if (cause) e.cause = () => cause
@@ -25,11 +25,11 @@ module.exports.query = (pgError, context) => {
     if (pgError[k]) cause.context[k] = pgError[k]
   })
   delete cause.context.name
-  return instantiate(pgError.message, cause, context, 'QueryFailed')
+  return fail(pgError.message, cause, context, 'QueryFailed')
 }
 
 module.exports.mock = (name, mockError, context) => {
-  return instantiate(
+  return fail(
     `Mock ${name}() threw error`,
     mockError,
     context,
@@ -40,7 +40,7 @@ module.exports.mock = (name, mockError, context) => {
 module.exports.result = (message, result, context) => {
   const cause = new Error(message)
   cause.context = {result}
-  return instantiate(
+  return fail(
     'incorrect result from mock',
     cause,
     context,
