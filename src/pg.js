@@ -26,7 +26,7 @@ class PgStrategy extends BaseStrategy {
       return {_id, _client, _log: this.log}
     }).disposer(connection => {
       const ms = txnTimeMs()
-      this.log.info('pg disconnecting', {'connection-id': connection.id, ms})
+      this.log.info('pg disconnecting', {'connection-id': connection._id, ms})
       connection._client.release()
     })
   }
