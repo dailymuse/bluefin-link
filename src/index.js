@@ -86,6 +86,7 @@ class PgLink extends Link {
       }
     }
     MockLink.fn = {}
+    if ('log' in PgLink) MockLink.log = PgLink.log
     return MockLink
   }
 
