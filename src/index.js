@@ -28,6 +28,11 @@ class Link {
     return new MockingScope()
   }
 
+  static disconnect () {
+    MockStrategy.disconnect()
+    PgStrategy.disconnect()
+  }
+
   constructor (strategy) {
     this.strategy = strategy
     if (!('log' in strategy)) strategy.log = this.constructor.log
@@ -48,6 +53,10 @@ class Link {
       const proxy = new Proxy(connection, handler)
       return fn(proxy)
     })
+  }
+
+  disconnect () {
+    return this.strategy.disconnect()
   }
 
   all () {
