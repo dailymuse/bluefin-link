@@ -9,6 +9,14 @@ const time = require('./time')
 const BaseStrategy = require('./base')
 
 class PgStrategy extends BaseStrategy {
+  static disconnect () {
+    const vows = []
+    for (let url in pools) {
+      vows.push(pools[url].end())
+    }
+    return Promise.all(vows)
+  }
+
   connect () {
     var txnTimeMs
 
@@ -29,6 +37,10 @@ class PgStrategy extends BaseStrategy {
       this.log.info('pg disconnecting', {'connection-id': connection._id, ms})
       connection._client.release()
     })
+  }
+
+  disconnect () {
+    return getPool(this.url).end()
   }
 
   createMethod (name, meta, text) {

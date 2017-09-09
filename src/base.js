@@ -6,6 +6,10 @@ const path = require('path')
 const Promise = require('bluebird')
 
 class BaseStrategy {
+  static disconnect () {
+    return Promise.resolve()
+  }
+
   constructor (url, directory) {
     this.url = url
     this.directory = directory
@@ -14,6 +18,10 @@ class BaseStrategy {
       commit: this.createTxnMethod('commit'),
       rollback: this.createTxnMethod('rollback')
     }
+  }
+
+  disconnect () {
+    return Promise.resolve()
   }
 
   hasMethod (name) {
