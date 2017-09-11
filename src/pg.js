@@ -1,7 +1,6 @@
 'use strict'
 
 const Promise = require('bluebird')
-const EventEmitter = require('events')
 const pg = require('pg')
 
 const failed = require('./failed')

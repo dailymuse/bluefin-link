@@ -132,7 +132,7 @@ module.exports = test => {
 
   test('automatically rolls back transactions', t => {
     const {db, Link} = t.context
-    t.context.Link.fn.error = () => {
+    Link.fn.error = () => {
       throw new Error('column "this_column_doesnt_exist" does not exist')
     }
     return t.context.db
