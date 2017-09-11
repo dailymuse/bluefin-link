@@ -1,6 +1,5 @@
 const test = require('ava')
 const pg = require('pg')
-const path = require('path')
 const sinon = require('sinon')
 
 const Link = require('../src')

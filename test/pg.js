@@ -1,12 +1,10 @@
 const test = require('ava')
 const {Client} = require('pg')
-const path = require('path')
 
 const PgLink = require('../src')
 const common = require('./lib/common')
 
 const dbUrl = 'pg:///test'
-const sourceDir = path.join(__dirname, 'sql')
 
 let db
 const client = new Client(dbUrl)

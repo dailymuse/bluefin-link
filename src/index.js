@@ -24,10 +24,6 @@ class Link {
     pg.types.setTypeParser(20, parseInt)
   }
 
-  static mock () {
-    return new MockingScope()
-  }
-
   static disconnect () {
     MockStrategy.disconnect()
     PgStrategy.disconnect()
