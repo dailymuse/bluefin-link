@@ -91,9 +91,8 @@ class PgStrategy extends BaseStrategy {
   }
 
   createTxnMethod (sql) {
-    // In pg 6.x and earlier, query returns a hybrid promise/emitter object.
-    // We want to return a proper bluebird promise, so create it via a callback.
-    // We'll be able to remove this when we upgrade to pg 7.0
+    // query() will return a native Promise, but we want a bluebird promise,
+    // so we call query() with a callback and convert it to a promise
     return function () {
       this._log.info(sql, {'connection-id': this._id})
       return Promise.fromCallback(cb => this._client.query(sql, cb))
