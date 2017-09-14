@@ -14,10 +14,7 @@ test.before(t => {
   db = new Link(dbUrl, __dirname, 'sql')
 })
 
-test.after(t => {
-  clock.restore()
-  pg.connect.restore()
-})
+test.after(t => clock.restore())
 
 test('times out after 30 seconds trying to connect', t => {
   t.plan(1)
