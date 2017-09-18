@@ -25,8 +25,7 @@ class Link {
   }
 
   static disconnect () {
-    MockStrategy.disconnect()
-    PgStrategy.disconnect()
+    return PgStrategy.disconnect()
   }
 
   constructor (strategy) {
