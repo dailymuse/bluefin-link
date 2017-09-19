@@ -12,6 +12,7 @@ class PgStrategy extends BaseStrategy {
     const vows = []
     for (let url in pools) {
       vows.push(pools[url].end())
+      delete pools[url]
     }
     return Promise.all(vows)
   }
@@ -39,7 +40,10 @@ class PgStrategy extends BaseStrategy {
   }
 
   disconnect () {
-    return getPool(this.url).end()
+    if (!(this.url in pools)) return Promise.resolve()
+    const pool = pools[this.url]
+    delete pools[this.url]
+    return pool.end()
   }
 
   createMethod (name, meta, text) {

@@ -1,8 +1,8 @@
-const PgLink = require('../src')
+const PgLink = require('../../src')
 
 const Mock = PgLink.mock()
 Mock.fn.selectInteger = int => int
-const db = new Mock('pg:///test', __dirname, '..', 'test', 'sql')
+const db = new Mock('pg:///test', __dirname, '..', 'sql')
 
 db
   .connect(sql => sql.selectInteger(7))

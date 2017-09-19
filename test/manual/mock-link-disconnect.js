@@ -1,6 +1,6 @@
-const PgLink = require('../src')
+const PgLink = require('../../src')
 
-const db = new PgLink('pg:///test', __dirname, '..', 'test', 'sql')
+const db = new PgLink('pg:///test', __dirname, '..', 'sql')
 
 db
   .connect(sql => sql.selectInteger(7))
