@@ -6,7 +6,8 @@
   "license": "MIT",
   "dependencies": {
     "debug": "~3.0.1",
-    "pg": "~7.3.0"
+    "pg": "~7.3.0",
+    "promise-retry": "~1.1.1"
   },
   "devDependencies": {
     "ava": "^0.22.0",

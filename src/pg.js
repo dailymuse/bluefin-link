@@ -3,10 +3,13 @@
 const crypto = require('crypto')
 const Promise = require('bluebird')
 const pg = require('pg')
+const pretry = require('promise-retry')
 
 const failed = require('./failed')
 const time = require('./time')
 const BaseStrategy = require('./base')
+
+const pools = {}
 
 class PgStrategy extends BaseStrategy {
   static disconnect () {
@@ -18,15 +21,40 @@ class PgStrategy extends BaseStrategy {
     return Promise.all(vows)
   }
 
+  get poolKey () {
+    const hash = new crypto.Hash('md5')
+    hash.update(JSON.stringify(this.options))
+    return hash.digest('base64')
+  }
+
+  getPool () {
+    const key = this.poolKey
+    if (key in pools) return pools[key]
+
+    const poolOpts = Object.assign(
+      {
+        connectionTimeoutMillis: 30000,
+        Promise
+      },
+      this.options
+    )
+    const p = new pg.Pool(poolOpts)
+    pools[key] = p
+    return p
+  }
+
   connect () {
     var txnTimeMs
 
     const connectTimeMs = time.start()
     const idvow = this.genId()
-    const pool = getPool(this.options)
-    const cvow = pool
-      .connect()
-      .timeout(30000, 'Timed out attempting to connect to database')
+    const pool = this.getPool()
+
+    const retryOpts = Object.assign({randomize: true}, this.options)
+    const cvow = pretry(retryOpts, (retry, count) => {
+      if (count > 1) this.log.info('retrying database connection', {count})
+      return pool.connect().catch(retry)
+    })
 
     return Promise.join(idvow, cvow, (_id, _client) => {
       const ms = connectTimeMs()
@@ -41,9 +69,10 @@ class PgStrategy extends BaseStrategy {
   }
 
   disconnect () {
-    if (!(this.url in pools)) return Promise.resolve()
-    const pool = pools[this.url]
-    delete pools[this.url]
+    const key = this.poolKey
+    if (!(key in pools)) return Promise.resolve()
+    const pool = pools[key]
+    delete pools[key]
     return pool.end()
   }
 
@@ -113,20 +142,4 @@ function format (v) {
   else if (v instanceof Buffer) return '\\x' + v.toString('hex')
   else if (typeof v.toSql === 'function') return format(v.toSql())
   else return v
-}
-
-const pools = {}
-function getPool (options) {
-  const hash = new crypto.Hash('md5')
-  hash.update(JSON.stringify(options))
-  const key = hash.digest()
-
-  if (key in pools) return pools[key]
-  const poolOpts = Object.assign({}, options, {
-    connectionString: options.url,
-    Promise
-  })
-  const p = new pg.Pool(poolOpts)
-  pools[key] = p
-  return p
 }

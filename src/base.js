@@ -11,14 +11,24 @@ class BaseStrategy {
   }
 
   constructor (options) {
-    this.url = options.url
     this.directory = options.directory
+    delete options.directory
+
     this.options = options
     this.methods = {
       begin: this.createTxnMethod('begin'),
       commit: this.createTxnMethod('commit'),
       rollback: this.createTxnMethod('rollback')
     }
+  }
+
+  get url () {
+    if (this.options.connectionString) return this.options.connectionString
+    const host = this.options.host || process.env.PGHOST
+    const port = this.options.port || process.env.PGPORT
+    const user = this.options.user || process.env.PGUSER
+    const database = this.options.database || process.env.PGDATABASE
+    return `postgres://${user}@${host}:${port}/${database}`
   }
 
   disconnect () {

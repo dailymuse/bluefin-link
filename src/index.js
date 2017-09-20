@@ -8,9 +8,12 @@ const MockStrategy = require('./mock.js')
 const PgStrategy = require('./pg.js')
 
 const checkLinkArgs = (options, segments, cb) => {
-  options = typeof options === 'string' ? {url: options} : options
-  if (options.url === undefined) throw new Error('No url specified')
   if (segments.length < 1) throw new Error('No query directory specified')
+
+  options = typeof options === 'string' ? {connectionString: options} : options
+  if (options.connectionString === undefined) {
+    throw new Error('No url specified')
+  }
 
   options.directory = path.resolve.apply(path, segments)
   fs.accessSync(options.directory, fs.R_OK)
