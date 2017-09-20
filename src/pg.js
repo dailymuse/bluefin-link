@@ -1,5 +1,6 @@
 'use strict'
 
+const crypto = require('crypto')
 const Promise = require('bluebird')
 const pg = require('pg')
 
@@ -22,7 +23,7 @@ class PgStrategy extends BaseStrategy {
 
     const connectTimeMs = time.start()
     const idvow = this.genId()
-    const pool = getPool(this.url)
+    const pool = getPool(this.options)
     const cvow = pool
       .connect()
       .timeout(30000, 'Timed out attempting to connect to database')
@@ -115,9 +116,17 @@ function format (v) {
 }
 
 const pools = {}
-function getPool (url) {
-  if (url in pools) return pools[url]
-  const p = new pg.Pool({connectionString: url, Promise})
-  pools[url] = p
+function getPool (options) {
+  const hash = new crypto.Hash('md5')
+  hash.update(JSON.stringify(options))
+  const key = hash.digest()
+
+  if (key in pools) return pools[key]
+  const poolOpts = Object.assign({}, options, {
+    connectionString: options.url,
+    Promise
+  })
+  const p = new pg.Pool(poolOpts)
+  pools[key] = p
   return p
 }

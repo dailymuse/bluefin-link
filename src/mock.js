@@ -7,8 +7,8 @@ const failed = require('./failed')
 const time = require('./time')
 
 class MockStrategy extends BaseStrategy {
-  constructor (url, directory, mocks) {
-    super(url, directory)
+  constructor (options, mocks) {
+    super(options)
     this.mocks = mocks
   }
 

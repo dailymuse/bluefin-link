@@ -10,9 +10,10 @@ class BaseStrategy {
     return Promise.resolve()
   }
 
-  constructor (url, directory) {
-    this.url = url
-    this.directory = directory
+  constructor (options) {
+    this.url = options.url
+    this.directory = options.directory
+    this.options = options
     this.methods = {
       begin: this.createTxnMethod('begin'),
       commit: this.createTxnMethod('commit'),

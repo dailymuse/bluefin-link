@@ -7,13 +7,14 @@ const DebugLog = require('./log')
 const MockStrategy = require('./mock.js')
 const PgStrategy = require('./pg.js')
 
-const checkLinkArgs = (url, segments, cb) => {
-  if (url === undefined) throw new Error('No url specified')
+const checkLinkArgs = (options, segments, cb) => {
+  options = typeof options === 'string' ? {url: options} : options
+  if (options.url === undefined) throw new Error('No url specified')
   if (segments.length < 1) throw new Error('No query directory specified')
 
-  const directory = path.resolve.apply(path, segments)
-  fs.accessSync(directory, fs.R_OK)
-  return directory
+  options.directory = path.resolve.apply(path, segments)
+  fs.accessSync(options.directory, fs.R_OK)
+  return options
 }
 
 class Link {
@@ -83,9 +84,9 @@ class PgLink extends Link {
         }
       }
 
-      constructor (url, ...segments) {
-        const directory = checkLinkArgs(url, segments)
-        const strategy = new MockStrategy(url, directory, MockLink.fn)
+      constructor (options, ...segments) {
+        options = checkLinkArgs(options, segments)
+        const strategy = new MockStrategy(options, MockLink.fn)
         super(strategy)
       }
     }
@@ -94,9 +95,9 @@ class PgLink extends Link {
     return MockLink
   }
 
-  constructor (url, ...segments) {
-    const directory = checkLinkArgs(url, segments)
-    super(new PgStrategy(url, directory))
+  constructor (options, ...segments) {
+    options = checkLinkArgs(options, segments)
+    super(new PgStrategy(options))
   }
 }
 
