@@ -5,14 +5,14 @@
   "main": "src/index.js",
   "license": "MIT",
   "dependencies": {
-    "debug": "~3.0.1",
+    "debug": "~3.1.0",
     "pg": "~7.3.0",
     "promise-retry": "~1.1.1"
   },
   "devDependencies": {
-    "ava": "^0.22.0",
-    "sinon": "~3.2.1",
-    "standard": "^10.0.3"
+    "ava": "~0.22.0",
+    "sinon": "~4.0.1",
+    "standard": "~10.0.3"
   },
   "ava": {
     "files": [
