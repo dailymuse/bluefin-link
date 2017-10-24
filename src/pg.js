@@ -87,10 +87,10 @@ class PgStrategy extends BaseStrategy {
         }
         break
       case 'row':
-        fn = r => r.rows[0]
+        fn = r => r.rows[0] ? Object.assign({}, r.rows[0]) : r.rows[0]
         break
       case 'table':
-        fn = r => r.rows
+        fn = r => r.rows.map(ea => ea ? Object.assign({}, ea) : ea)
         break
       case undefined:
         fn = result => result
