@@ -51,14 +51,11 @@ class PgStrategy extends BaseStrategy {
     const idvow = this.genId()
     const pool = this.getPool()
 
-    const retryOpts = Object.assign(
-      {randomize: true, maxTimeout: 8000},
-      this.options
-    )
+    const retryOpts = Object.assign({randomize: true, maxTimeout: 8000}, this.options)
     const cvow = pretry(retryOpts, (retry, count) => {
       attempts = count
       return pool.connect().catch(err => {
-        this.log.info({message, attempt}, 'connection failed')
+        this.log.info({message: err.message, attempt: count}, 'connection failed')
         retry(err)
       })
     })
