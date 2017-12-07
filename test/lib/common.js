@@ -98,11 +98,7 @@ module.exports = test => {
   test('executes queries in parallel', t => {
     t.context.Link.fn.selectInteger = 3
     return t.context.db
-      .all(
-        c => c.selectInteger(3),
-        c => c.selectInteger(3),
-        c => c.selectInteger(3)
-      )
+      .all(c => c.selectInteger(3), c => c.selectInteger(3), c => c.selectInteger(3))
       .spread((one, two, three) => {
         t.is(one, 3)
         t.is(two, 3)
@@ -164,5 +160,10 @@ module.exports = test => {
       t.is(e.context.return, 'row')
       t.true(e.context.source.includes(`${sourceDir}/errorWithArguments.sql`))
     })
+  })
+
+  test('returns a bluebird promise', t => {
+    t.context.Link.fn.selectInteger = 43
+    return t.context.db.connect(c => c.selectInteger(43).return(6)).then(val => t.is(val, 6))
   })
 }

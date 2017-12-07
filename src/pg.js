@@ -87,10 +87,10 @@ class PgStrategy extends BaseStrategy {
         }
         break
       case 'row':
-        fn = r => r.rows[0] ? Object.assign({}, r.rows[0]) : r.rows[0]
+        fn = r => (r.rows[0] ? Object.assign({}, r.rows[0]) : r.rows[0])
         break
       case 'table':
-        fn = r => r.rows.map(ea => ea ? Object.assign({}, ea) : ea)
+        fn = r => r.rows.map(ea => (ea ? Object.assign({}, ea) : ea))
         break
       case undefined:
         fn = result => result
@@ -109,8 +109,10 @@ class PgStrategy extends BaseStrategy {
       const context = {arguments: args}
       Object.assign(context, meta)
       Error.captureStackTrace(context, method)
-      return this._client
-        .query(text, args)
+
+      // query() will return a native Promise, but we want a bluebird promise,
+      // so we call query() with a callback and convert it to a promise
+      return Promise.fromCallback(cb => this._client.query(text, args, cb))
         .then(result => {
           logQuery(this._id, elapsed, args)
           return extract(result)
