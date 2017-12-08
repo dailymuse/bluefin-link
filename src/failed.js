@@ -7,14 +7,15 @@ function fail (message, cause, context, name = 'Error') {
   if (context) {
     e.context = context
     if ('stack' in context) {
-      e.stack = context.stack.replace(
-        /(Error)|(\[object Object\])/,
-        `${name}: ${e.message}`
-      )
+      e.stack = context.stack.replace(/(Error)|(\[object Object\])/, `${name}: ${e.message}`)
       delete e.context.stack
     }
   }
   return e
+}
+
+module.exports.connection = (err, context) => {
+  return fail('Unable to connect to database', err, context, 'ConnectionFailed')
 }
 
 module.exports.query = (pgError, context) => {
@@ -29,21 +30,11 @@ module.exports.query = (pgError, context) => {
 }
 
 module.exports.mock = (name, mockError, context) => {
-  return fail(
-    `Mock ${name}() threw error`,
-    mockError,
-    context,
-    'QueryFailed'
-  )
+  return fail(`Mock ${name}() threw error`, mockError, context, 'QueryFailed')
 }
 
 module.exports.result = (message, result, context) => {
   const cause = new Error(message)
   cause.context = {result}
-  return fail(
-    'incorrect result from mock',
-    cause,
-    context,
-    'QueryFailed'
-  )
+  return fail('incorrect result from mock', cause, context, 'QueryFailed')
 }
