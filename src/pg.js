@@ -45,24 +45,26 @@ class PgStrategy extends BaseStrategy {
 
   connect () {
     var txnTimeMs
-    var attempts = 0
+    var failures = []
 
     const connectTimeMs = time.start()
     const idvow = this.genId()
     const pool = this.getPool()
 
     const retryOpts = Object.assign({randomize: true, maxTimeout: 8000}, this.options)
-    const cvow = pretry(retryOpts, (retry, count) => {
-      attempts = count
+    const cvow = pretry(retryOpts, retry => {
       return pool.connect().catch(err => {
-        this.log.info({message: err.message, attempt: count}, 'connection failed')
+        failures.push(err.message)
         retry(err)
       })
+    }).catch(err => {
+      const context = Object.assign(retryOpts, {attempts: failures.length, messages: failures})
+      throw failed.connection(err, context)
     })
 
     return Promise.join(idvow, cvow, (_id, _client) => {
       const ms = connectTimeMs()
-      const info = {'connection-id': _id, ms, attempts}
+      const info = {'connection-id': _id, ms, attempts: failures.length + 1}
       this.log.info('pg connected', this.desc(info))
       txnTimeMs = time.start()
       return {_id, _client, _log: this.log}
