@@ -4,7 +4,7 @@ const sourceDir = path.join(__dirname, '..', 'sql')
 
 module.exports = test => {
   test('initializes correctly', t => {
-    t.is(t.context.db.url, 'pg:///test')
+    t.is(t.context.db.options.database, 'test')
     t.is(t.context.db.directory, sourceDir)
   })
 

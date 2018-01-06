@@ -44,10 +44,10 @@ class PgStrategy extends BaseStrategy {
   }
 
   connect () {
-    var txnTimeMs
+    var txnEnd
     var failures = []
 
-    const connectTimeMs = time.start()
+    const connectEnd = this.tally.begin('pg.connect.duration')
     const idvow = this.genId()
     const pool = this.getPool()
 
@@ -63,14 +63,12 @@ class PgStrategy extends BaseStrategy {
     })
 
     return Promise.join(idvow, cvow, (_id, _client) => {
-      const ms = connectTimeMs()
-      const info = {'connection-id': _id, ms, attempts: failures.length + 1}
-      this.log.info('pg connected', this.desc(info))
-      txnTimeMs = time.start()
+      connectEnd({host: this.options.host})
+      this.tally.count('pg.connect.retries', failures.length, {host: this.options.host})
+      txnEnd = this.tally.begin('pg.connection.duration')
       return {_id, _client, _log: this.log}
     }).disposer(connection => {
-      const ms = txnTimeMs()
-      this.log.info('pg disconnecting', {'connection-id': connection._id, ms})
+      txnEnd({host: this.options.host})
       connection._client.release()
     })
   }
@@ -110,8 +108,9 @@ class PgStrategy extends BaseStrategy {
 
   createMethodWithCallback (name, meta, text, extract) {
     const logQuery = this.createLogQueryFn(meta)
+    const {options, tally} = this
     const method = function () {
-      const elapsed = time.start()
+      const queryEnd = tally.begin('pg.query.duration')
       const args = [...arguments].map(format)
       const context = {arguments: args}
       Object.assign(context, meta)
@@ -121,7 +120,8 @@ class PgStrategy extends BaseStrategy {
       // so we call query() with a callback and convert it to a promise
       return Promise.fromCallback(cb => this._client.query(text, args, cb))
         .then(result => {
-          logQuery(this._id, elapsed, args)
+          const microseconds = queryEnd({host: options.host, query: name})
+          logQuery(this._id, microseconds, args)
           return extract(result)
         })
         .catch(pgError => {
