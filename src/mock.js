@@ -13,25 +13,26 @@ class MockStrategy extends BaseStrategy {
   }
 
   connect () {
-    var id
+    const connectEnd = this.tally.begin('mock.connect.duration')
+    var txnEnd
     return this.genId()
       .then(_id => {
-        id = _id
-        this.log.info('mock connected', this.desc({'connection-id': id}))
-        return {_id: id, _log: this.log}
+        connectEnd({host: this.options.host})
+        this.tally.count('mock.connect.retries', 0, {host: this.options.host})
+        txnEnd = this.tally.begin('mock.connection.duration')
+        return {_id, _log: this.log}
       })
       .disposer(() => {
-        // no actual resources to clean up
-        this.log.info('mock disconnnecting', {'connection-id': id})
+        txnEnd({host: this.options.host})
       })
   }
 
   createMethod (name, meta, text) {
     const logQuery = this.createLogQueryFn(meta)
     const checkResult = this.createCheckResultFn(name, meta)
-    const mocks = this.mocks
+    const {options, mocks, tally} = this
     const method = function () {
-      const elapsed = time.start()
+      const queryEnd = tally.begin('mock.query.duration')
       const args = [...arguments]
       const context = {arguments: args}
       Object.assign(context, meta)
@@ -47,7 +48,8 @@ class MockStrategy extends BaseStrategy {
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
           let result = mock
-          logQuery(this._id, elapsed, args)
+          const microseconds = queryEnd({host: options.host, query: name})
+          logQuery(this._id, microseconds, args)
           if (typeof mock === 'function') {
             try {
               result = mock.apply(this, args)

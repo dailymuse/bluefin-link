@@ -4,6 +4,7 @@ const Promise = require('bluebird')
 const pg = require('pg')
 
 const DebugLog = require('./log')
+const DebugTally = require('./tally')
 const MockStrategy = require('./mock.js')
 const PgStrategy = require('./pg.js')
 
@@ -35,10 +36,11 @@ class Link {
   constructor (strategy) {
     this.strategy = strategy
     if (!('log' in strategy)) strategy.log = this.constructor.log
+    if (!('tally' in strategy)) strategy.tally = this.constructor.tally
   }
 
-  get url () {
-    return this.strategy.url
+  get options () {
+    return this.strategy.options
   }
 
   get directory () {
@@ -68,15 +70,13 @@ class Link {
       return c
         .begin()
         .then(() => Promise.try(fn, c))
-        .then(
-          result => c.commit().return(result),
-          err => c.rollback().throw(err)
-        )
+        .then(result => c.commit().return(result), err => c.rollback().throw(err))
     })
   }
 }
 
 Link.log = new DebugLog()
+Link.tally = new DebugTally()
 
 class PgLink extends Link {
   static mock () {
@@ -95,6 +95,7 @@ class PgLink extends Link {
     }
     MockLink.fn = {}
     if ('log' in PgLink) MockLink.log = PgLink.log
+    if ('tally' in PgLink) MockLink.tally = PgLink.tally
     return MockLink
   }
 

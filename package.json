@@ -7,6 +7,7 @@
   "dependencies": {
     "debug": "~3.1.0",
     "pg": "~7.4.0",
+    "pg-connection-string": "~2.0.0",
     "promise-retry": "~1.1.1"
   },
   "devDependencies": {

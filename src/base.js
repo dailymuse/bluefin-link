@@ -4,15 +4,29 @@ const crypto = require('crypto')
 const fs = require('fs')
 const path = require('path')
 const Promise = require('bluebird')
+const parseConnectionString = require('pg-connection-string').parse
+const url = require('url')
 
 class BaseStrategy {
   static disconnect () {
     return Promise.resolve()
   }
 
-  constructor (options) {
-    this.directory = options.directory
-    delete options.directory
+  constructor (_options) {
+    this.directory = _options.directory
+    delete _options.directory
+
+    const options = Object.assign({}, _options)
+    if ('connectionString' in options) {
+      const parsed = parseConnectionString(options.connectionString)
+      delete options.connectionString
+      parsed.host = parsed.host || process.env.PGHOST || 'localhost'
+      parsed.port = parsed.port || process.env.PGPORT
+      parsed.user = parsed.user || process.env.PGUSER
+      parsed.database = parsed.database || process.env.PGDATABASE
+      parsed.password = parsed.password || process.env.PGPASSWORD
+      Object.assign(options, parsed)
+    }
 
     this.options = options
     this.methods = {
@@ -20,15 +34,6 @@ class BaseStrategy {
       commit: this.createTxnMethod('commit'),
       rollback: this.createTxnMethod('rollback')
     }
-  }
-
-  get url () {
-    if (this.options.connectionString) return this.options.connectionString
-    const host = this.options.host || process.env.PGHOST
-    const port = this.options.port || process.env.PGPORT
-    const user = this.options.user || process.env.PGUSER
-    const database = this.options.database || process.env.PGDATABASE
-    return `postgres://${user}@${host}:${port}/${database}`
   }
 
   disconnect () {
@@ -73,19 +78,15 @@ class BaseStrategy {
   }
 
   genId () {
-    return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf =>
-      buf.toString('hex')
-    )
+    return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf => buf.toString('hex'))
   }
 
   createLogQueryFn (meta) {
     const data = Object.assign({}, meta)
-    return (id, elapsed, args) => {
+    return (id, microseconds, args) => {
       data['connection-id'] = id
-      data.ms = elapsed()
-      data.arguments = args.map(
-        p => (Buffer.isBuffer(p) ? '\\x' + p.toString('hex') : p)
-      )
+      data.ms = microseconds / 1000
+      data.arguments = args.map(p => (Buffer.isBuffer(p) ? '\\x' + p.toString('hex') : p))
       this.log.info('query', data)
     }
   }
