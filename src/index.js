@@ -47,6 +47,14 @@ class Link {
     return this.strategy.directory
   }
 
+  get tally () {
+    return this.strategy.tally
+  }
+
+  set tally (t) {
+    this.strategy.tally = t
+  }
+
   connect (fn) {
     const disposer = this.strategy.connect()
     return Promise.using(disposer, connection => {
