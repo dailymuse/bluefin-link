@@ -28,7 +28,7 @@ class MockStrategy extends BaseStrategy {
   }
 
   createMethod (name, meta, text) {
-    const logQuery = this.createLogQueryFn(meta)
+    const logQuery = this.createLogQueryFn(name, meta)
     const checkResult = this.createCheckResultFn(name, meta)
     const {options, mocks, tally} = this
     const method = function () {
