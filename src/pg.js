@@ -39,7 +39,9 @@ class PgStrategy extends BaseStrategy {
       this.options
     )
     const p = new pg.Pool(poolOpts)
+    p.on('error', e => this.log.error(e))
     pools[key] = p
+
     return p
   }
 
@@ -47,29 +49,41 @@ class PgStrategy extends BaseStrategy {
     var txnEnd
     var failures = []
 
-    const connectEnd = this.tally.begin('pg.connect.duration')
     const idvow = this.genId()
     const pool = this.getPool()
+    const dimensions = {host: this.options.host, callsite: this.formatCallSite()}
+    const info = (id, ms) => {
+      const info = {clients: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount}
+      if (id !== undefined) info['connection-id'] = id
+      if (ms !== undefined) info.ms = ms
+      return Object.assign(info, dimensions)
+    }
+
+    const connectEnd = this.tally.begin('pg.connect.duration')
 
     const retryOpts = Object.assign({randomize: true, maxTimeout: 8000}, this.options)
     const cvow = pretry(retryOpts, retry => {
+      this.log.info('connecting', info())
       return pool.connect().catch(err => {
         failures.push(err.message)
         retry(err)
       })
     }).catch(err => {
       const context = Object.assign(retryOpts, {attempts: failures.length, messages: failures})
+      context.ms = connectEnd(info()) * 1e-3
       throw failed.connection(err, context)
     })
 
     return Promise.join(idvow, cvow, (_id, _client) => {
-      connectEnd({host: this.options.host})
-      this.tally.count('pg.connect.retries', failures.length, {host: this.options.host})
+      const ms = connectEnd(dimensions) * 1e-3
+      this.log.info('connected', info(_id, ms))
+      this.tally.count('pg.connect.retries', failures.length, dimensions)
       txnEnd = this.tally.begin('pg.connection.duration')
       return {_id, _client, _log: this.log}
     }).disposer(connection => {
-      txnEnd({host: this.options.host})
+      const ms = txnEnd(dimensions) * 1e-3
       connection._client.release()
+      this.log.info('disconnected', info(connection._id, ms))
     })
   }
 
@@ -107,7 +121,7 @@ class PgStrategy extends BaseStrategy {
   }
 
   createMethodWithCallback (name, meta, text, extract) {
-    const logQuery = this.createLogQueryFn(meta)
+    const logQuery = this.createLogQueryFn(name, meta)
     const {options, tally} = this
     const method = function () {
       const queryEnd = tally.begin('pg.query.duration')
@@ -130,6 +144,7 @@ class PgStrategy extends BaseStrategy {
           throw e
         })
     }
+
     return method
   }
 

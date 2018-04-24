@@ -81,14 +81,79 @@ class BaseStrategy {
     return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf => buf.toString('hex'))
   }
 
-  createLogQueryFn (meta) {
+  createLogQueryFn (name, meta) {
     const data = Object.assign({}, meta)
+    data.callsite = this.formatCallSite()
     return (id, microseconds, args) => {
       data['connection-id'] = id
       data.ms = microseconds / 1000
       data.arguments = args.map(p => (Buffer.isBuffer(p) ? '\\x' + p.toString('hex') : p))
       this.log.info('query', data)
     }
+  }
+
+  getCallSite () {
+    const _prepareStackTrace = Error.prepareStackTrace
+
+    try {
+      Error.prepareStackTrace = (_, stack) => {
+        return stack.find(frame => !(frame.getFileName() || '').includes('bluefin-link'))
+      }
+      return new Error().stack
+    } finally {
+      Error.prepareStackTrace = _prepareStackTrace
+    }
+  }
+
+  formatCallSite (frame) {
+    if (!frame) frame = this.getCallSite()
+    if (!frame) return
+
+    const parts = []
+
+    const typeName = frame.getTypeName()
+    if (typeName) {
+      parts.push(typeName)
+      parts.push('.')
+    }
+
+    const functionName = frame.getFunctionName()
+    const methodName = frame.getMethodName()
+    if (functionName) {
+      parts.push(functionName)
+      if (methodName && methodName !== functionName) {
+        parts.push('[as ')
+        parts.push(methodName)
+        parts.push(']')
+      }
+    } else if (methodName) {
+      parts.push(methodName)
+    } else {
+      parts.push('<anonymous>')
+    }
+
+    parts.push(' (')
+    const fileName = frame.getFileName()
+    if (fileName) {
+      parts.push(fileName)
+      const lineNumber = frame.getLineNumber()
+      if (lineNumber) {
+        parts.push(':')
+        parts.push(lineNumber)
+        const columnNumber = frame.getColumnNumber()
+        if (columnNumber) {
+          parts.push(':')
+          parts.push(columnNumber)
+        }
+      }
+    } else if (frame.isNative()) {
+      parts.push('<native>')
+    } else {
+      parts.push('<unknown>')
+    }
+    parts.push(')')
+
+    return parts.join('')
   }
 }
 
