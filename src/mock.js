@@ -3,7 +3,6 @@
 const Promise = require('bluebird')
 
 const BaseStrategy = require('./base')
-const failed = require('./failed')
 const time = require('./time')
 
 class MockStrategy extends BaseStrategy {
@@ -13,13 +12,13 @@ class MockStrategy extends BaseStrategy {
   }
 
   connect () {
-    const connectEnd = this.tally.begin('mock.connect.duration')
+    const connectEnd = this.log.begin('mock.connect.duration')
     var txnEnd
     return this.genId()
       .then(_id => {
         connectEnd({host: this.options.host})
-        this.tally.count('mock.connect.retries', 0, {host: this.options.host})
-        txnEnd = this.tally.begin('mock.connection.duration')
+        this.log.count('mock.connect.retries', 0, {host: this.options.host})
+        txnEnd = this.log.begin('mock.connection.duration')
         return {_id, _log: this.log}
       })
       .disposer(() => {
@@ -30,9 +29,9 @@ class MockStrategy extends BaseStrategy {
   createMethod (name, meta, text) {
     const logQuery = this.createLogQueryFn(name, meta)
     const checkResult = this.createCheckResultFn(name, meta)
-    const {options, mocks, tally} = this
+    const {options, mocks, log} = this
     const method = function () {
-      const queryEnd = tally.begin('mock.query.duration')
+      const queryEnd = log.begin('mock.query.duration')
       const args = [...arguments]
       const context = {arguments: args}
       Object.assign(context, meta)
@@ -53,9 +52,8 @@ class MockStrategy extends BaseStrategy {
           if (typeof mock === 'function') {
             try {
               result = mock.apply(this, args)
-            } catch (mockError) {
-              var e = failed.mock(name, mockError, context)
-              this._log.error(e)
+            } catch (e) {
+              log.fail(`mock ${name}() threw error`, e, context)
               return reject(e)
             }
           }
@@ -70,9 +68,10 @@ class MockStrategy extends BaseStrategy {
     const log = this.log
     return function (result, context, resolve, reject) {
       const fail = msg => {
-        const e = failed.result(msg, result, context)
-        log.error(e)
-        reject(e)
+        const cause = new Error(msg)
+        cause.context = {result}
+        log.fail('incorrect result from mock', cause, context)
+        reject(cause)
       }
 
       if (meta.return === 'table') {

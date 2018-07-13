@@ -143,7 +143,7 @@ module.exports = test => {
           })
       })
       .catch(e => {
-        t.is(e.context.source, `${db.directory}/error.sql`)
+        t.is(e.effect.context.source, `${db.directory}/error.sql`)
       })
   })
 
@@ -154,11 +154,11 @@ module.exports = test => {
       throw new Error('whiffle')
     }
     return db.connect(c => c.errorWithArguments(42, 21, 96)).catch(e => {
-      t.is(e.name, 'QueryFailed')
-      t.true('context' in e)
-      t.deepEqual(e.context.arguments, [42, 21, 96])
-      t.is(e.context.return, 'row')
-      t.true(e.context.source.includes(`${sourceDir}/errorWithArguments.sql`))
+      const effect = e.effect
+      t.true('context' in effect)
+      t.deepEqual(effect.context.arguments, [42, 21, 96])
+      t.is(effect.context.return, 'row')
+      t.true(effect.context.source.includes(`${sourceDir}/errorWithArguments.sql`))
     })
   })
 
