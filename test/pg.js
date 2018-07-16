@@ -27,12 +27,20 @@ test.beforeEach(t => {
 common(test)
 
 test('error has correct information', t => {
-  return db.connect(c => c.errorWithArguments(42, 21, 96)).catch(e => {
-    t.is(e.message, 'invalid reference to FROM-clause entry for table "x"')
-    t.regex(e.stack, /^QueryFailed: invalid reference/)
+  return db.connect(c => c.errorWithArguments(42, 21, 96)).catch(cause => {
+    t.is(cause.message, 'invalid reference to FROM-clause entry for table "x"')
+    t.is(cause.context.length, 217)
+    t.is(cause.context.code, '42P01')
+    t.is(cause.context.position, 120)
+    t.is(
+      cause.context.hint,
+      'There is an entry for table "x", but it cannot be referenced from this part of the query.',
+    )
 
-    const c = e.cause()
-    t.is(c.message, 'invalid reference to FROM-clause entry for table "x"')
-    t.is(typeof c.context.hint, 'string')
+    const effect = cause.effect
+    t.is(effect.message, 'query failed')
+    t.deepEqual(effect.context.arguments, [42, 21, 96])
+    t.true(effect.context.source.endsWith('test/sql/errorWithArguments.sql'))
+    t.is(effect.context.return, 'row')
   })
 })

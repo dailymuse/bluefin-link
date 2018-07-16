@@ -5,14 +5,14 @@ const Promise = require('bluebird')
 const pg = require('pg')
 const pretry = require('promise-retry')
 
-const failed = require('./failed')
 const time = require('./time')
 const BaseStrategy = require('./base')
 
 const pools = {}
+const ignoreProperties = ['name', 'severity', 'file', 'line', 'routine']
 
 class PgStrategy extends BaseStrategy {
-  static disconnect () {
+  static disconnect() {
     const vows = []
     for (let url in pools) {
       vows.push(pools[url].end())
@@ -21,22 +21,22 @@ class PgStrategy extends BaseStrategy {
     return Promise.all(vows)
   }
 
-  get poolKey () {
+  get poolKey() {
     const hash = new crypto.Hash('md5')
     hash.update(JSON.stringify(this.options))
     return hash.digest('base64')
   }
 
-  getPool () {
+  getPool() {
     const key = this.poolKey
     if (key in pools) return pools[key]
 
     const poolOpts = Object.assign(
       {
         connectionTimeoutMillis: 30000,
-        Promise
+        Promise,
       },
-      this.options
+      this.options,
     )
     const p = new pg.Pool(poolOpts)
     p.on('error', e => this.log.error(e))
@@ -45,21 +45,23 @@ class PgStrategy extends BaseStrategy {
     return p
   }
 
-  connect () {
+  connect() {
     var txnEnd
     var failures = []
 
     const idvow = this.genId()
     const pool = this.getPool()
-    const dimensions = {host: this.options.host, callsite: this.formatCallSite()}
+    const dimensions = {host: this.options.host}
+    const context = {}
+    this.addCallsite(context)
     const info = (id, ms) => {
       const info = {clients: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount}
       if (id !== undefined) info['connection-id'] = id
       if (ms !== undefined) info.ms = ms
-      return Object.assign(info, dimensions)
+      return Object.assign(info, context, dimensions)
     }
 
-    const connectEnd = this.tally.begin('pg.connect.duration')
+    const connectEnd = this.log.begin('pg.connect.duration')
 
     const retryOpts = Object.assign({randomize: true, maxTimeout: 8000}, this.options)
     const cvow = pretry(retryOpts, retry => {
@@ -71,14 +73,14 @@ class PgStrategy extends BaseStrategy {
     }).catch(err => {
       const context = Object.assign(retryOpts, {attempts: failures.length, messages: failures})
       context.ms = connectEnd(info()) * 1e-3
-      throw failed.connection(err, context)
+      throw this.log.fail('Failed to connect to database', err, context)
     })
 
     return Promise.join(idvow, cvow, (_id, _client) => {
       const ms = connectEnd(dimensions) * 1e-3
       this.log.info('connected', info(_id, ms))
-      this.tally.count('pg.connect.retries', failures.length, dimensions)
-      txnEnd = this.tally.begin('pg.connection.duration')
+      this.log.count('pg.connect.retries', failures.length, dimensions)
+      txnEnd = this.log.begin('pg.connection.duration')
       return {_id, _client, _log: this.log}
     }).disposer(connection => {
       const ms = txnEnd(dimensions) * 1e-3
@@ -87,7 +89,7 @@ class PgStrategy extends BaseStrategy {
     })
   }
 
-  disconnect () {
+  disconnect() {
     const key = this.poolKey
     if (!(key in pools)) return Promise.resolve()
     const pool = pools[key]
@@ -95,7 +97,7 @@ class PgStrategy extends BaseStrategy {
     return pool.end()
   }
 
-  createMethod (name, meta, text) {
+  createMethod(name, meta, text) {
     var fn
     switch (meta.return) {
       case 'value':
@@ -120,11 +122,11 @@ class PgStrategy extends BaseStrategy {
     return this.createMethodWithCallback(name, meta, text, fn)
   }
 
-  createMethodWithCallback (name, meta, text, extract) {
+  createMethodWithCallback(name, meta, text, extract) {
     const logQuery = this.createLogQueryFn(name, meta)
-    const {options, tally} = this
-    const method = function () {
-      const queryEnd = tally.begin('pg.query.duration')
+    const {options, log} = this
+    const method = function() {
+      const queryEnd = log.begin('pg.query.duration')
       const args = [...arguments].map(format)
       const context = {arguments: args}
       Object.assign(context, meta)
@@ -138,32 +140,54 @@ class PgStrategy extends BaseStrategy {
           logQuery(this._id, microseconds, args)
           return extract(result)
         })
-        .catch(pgError => {
-          var e = failed.query(pgError, context)
-          this._log.error(e)
-          throw e
+        .catch(opErr => {
+          const cause = rebuildError(opErr.cause)
+          throw this._log.fail('query failed', cause, context)
         })
     }
 
     return method
   }
 
-  createTxnMethod (sql) {
-    // query() will return a native Promise, but we want a bluebird promise,
-    // so we call query() with a callback and convert it to a promise
-    return function () {
-      this._log.info(sql, {'connection-id': this._id})
-      return Promise.fromCallback(cb => this._client.query(sql, cb))
+  createTxnMethod(sql) {
+    return function() {
+      const context = {'connection-id': this._id, callsite: undefined}
+      this._log.info(sql, context)
+
+      // query() will return a native Promise, but we want a bluebird promise,
+      // so we call query() with a callback and convert it to a promise
+      return new Promise((resolve, reject) => {
+        this._client.query(sql, (err, val) => {
+          if (err) reject(rebuildError(err))
+          else resolve(val)
+        })
+      })
     }
   }
 }
 
 module.exports = PgStrategy
 
-function format (v) {
+function format(v) {
   if (v === null || v === undefined) return null
   else if (v instanceof Array) return v.map(format)
   else if (v instanceof Buffer) return '\\x' + v.toString('hex')
   else if (typeof v.toSql === 'function') return format(v.toSql())
   else return v
+}
+
+function rebuildError(pge) {
+  const error = new Error(pge.message)
+  error.stack = pge.stack.replace('error: ', 'Error: ')
+  error.context = {}
+  for (let p in pge) {
+    if (ignoreProperties.includes(p)) continue
+    if (pge[p] === undefined) continue
+    if (p === 'position') {
+      error.context[p] = parseInt(pge[p])
+    } else {
+      error.context[p] = pge[p]
+    }
+  }
+  return error
 }

@@ -4,7 +4,6 @@ const Promise = require('bluebird')
 const pg = require('pg')
 
 const DebugLog = require('./log')
-const DebugTally = require('./tally')
 const MockStrategy = require('./mock.js')
 const PgStrategy = require('./pg.js')
 
@@ -21,41 +20,53 @@ const checkLinkArgs = (options, segments, cb) => {
   return options
 }
 
+const customizeLog = log => {
+  if (typeof log.child === 'function') log = log.child('link')
+  return log
+}
+
 class Link {
-  static parseInt8AsJsNumber () {
+  static parseInt8AsJsNumber() {
     // this can lead to numerical errors for values greater than 2^32, because
     // JavaScript will use floats, which are not exact. However, int8 is the
     // type returned by COUNT(), which pg will return as a string by default.
     pg.types.setTypeParser(20, parseInt)
   }
 
-  static disconnect () {
+  static disconnect() {
     return PgStrategy.disconnect()
   }
 
-  constructor (strategy) {
-    this.strategy = strategy
-    if (!('log' in strategy)) strategy.log = this.constructor.log
-    if (!('tally' in strategy)) strategy.tally = this.constructor.tally
+  static get log() {
+    return this._log
   }
 
-  get options () {
+  static set log(log) {
+    this._log = customizeLog(log)
+  }
+
+  constructor(strategy) {
+    this.strategy = strategy
+    if (!('log' in strategy)) strategy.log = this.constructor.log
+  }
+
+  get options() {
     return this.strategy.options
   }
 
-  get directory () {
+  get directory() {
     return this.strategy.directory
   }
 
-  get tally () {
-    return this.strategy.tally
+  get log() {
+    return this.strategy.log
   }
 
-  set tally (t) {
-    this.strategy.tally = t
+  set log(log) {
+    this.strategy.log = customizeLog(log)
   }
 
-  connect (fn) {
+  connect(fn) {
     const disposer = this.strategy.connect()
     return Promise.using(disposer, connection => {
       const handler = new Handler(this.strategy)
@@ -64,16 +75,16 @@ class Link {
     })
   }
 
-  disconnect () {
+  disconnect() {
     return this.strategy.disconnect()
   }
 
-  all () {
+  all() {
     const results = [...arguments].map(ea => this.connect(ea))
     return Promise.all(results)
   }
 
-  txn (fn) {
+  txn(fn) {
     return this.connect(c => {
       return c
         .begin()
@@ -84,18 +95,17 @@ class Link {
 }
 
 Link.log = new DebugLog()
-Link.tally = new DebugTally()
 
 class PgLink extends Link {
-  static mock () {
+  static mock() {
     const MockLink = class extends Link {
-      static clearMocks () {
+      static clearMocks() {
         for (let name of Object.keys(this.fn)) {
           delete this.fn[name]
         }
       }
 
-      constructor (options, ...segments) {
+      constructor(options, ...segments) {
         options = checkLinkArgs(options, segments)
         const strategy = new MockStrategy(options, MockLink.fn)
         super(strategy)
@@ -103,29 +113,28 @@ class PgLink extends Link {
     }
     MockLink.fn = {}
     if ('log' in PgLink) MockLink.log = PgLink.log
-    if ('tally' in PgLink) MockLink.tally = PgLink.tally
     return MockLink
   }
 
-  constructor (options, ...segments) {
+  constructor(options, ...segments) {
     options = checkLinkArgs(options, segments)
     super(new PgStrategy(options))
   }
 }
 
 class Handler {
-  constructor (strategy) {
+  constructor(strategy) {
     this.strategy = strategy
   }
 
-  has (target, name) {
+  has(target, name) {
     if (name in target) return true
     if (this.strategy.hasMethod(name)) return true
     this.strategy.create(name)
     return this.strategy.hasMethod(name)
   }
 
-  get (target, name) {
+  get(target, name) {
     if (name in target) return target[name]
     if (name in this.strategy.methods) return this.strategy.methods[name]
     return this.strategy.create(name)

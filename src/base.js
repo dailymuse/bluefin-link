@@ -8,11 +8,11 @@ const parseConnectionString = require('pg-connection-string').parse
 const url = require('url')
 
 class BaseStrategy {
-  static disconnect () {
+  static disconnect() {
     return Promise.resolve()
   }
 
-  constructor (_options) {
+  constructor(_options) {
     this.directory = _options.directory
     delete _options.directory
 
@@ -32,19 +32,19 @@ class BaseStrategy {
     this.methods = {
       begin: this.createTxnMethod('begin'),
       commit: this.createTxnMethod('commit'),
-      rollback: this.createTxnMethod('rollback')
+      rollback: this.createTxnMethod('rollback'),
     }
   }
 
-  disconnect () {
+  disconnect() {
     return Promise.resolve()
   }
 
-  hasMethod (name) {
+  hasMethod(name) {
     return name in this.methods
   }
 
-  create (name) {
+  create(name) {
     var text
     var source
     try {
@@ -62,7 +62,7 @@ class BaseStrategy {
     return this.methods[name]
   }
 
-  extractMetaData (text, meta) {
+  extractMetaData(text, meta) {
     const pattern = /^--\*\s+(\w+)\s+(\w+)/g
 
     var match
@@ -73,17 +73,18 @@ class BaseStrategy {
     return meta
   }
 
-  desc (options) {
+  desc(options) {
     return Object.assign({url: this.url}, options)
   }
 
-  genId () {
+  genId() {
     return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf => buf.toString('hex'))
   }
 
-  createLogQueryFn (name, meta) {
+  createLogQueryFn(name, meta) {
     const data = Object.assign({}, meta)
-    data.callsite = this.formatCallSite()
+    if (data.source) data.source = this.log.formatPath(data.source)
+    this.addCallsite(data)
     return (id, microseconds, args) => {
       data['connection-id'] = id
       data.ms = microseconds / 1000
@@ -92,69 +93,20 @@ class BaseStrategy {
     }
   }
 
-  getCallSite () {
-    const _prepareStackTrace = Error.prepareStackTrace
-
-    try {
-      Error.prepareStackTrace = (_, stack) => {
-        return stack.find(frame => !(frame.getFileName() || '').includes('bluefin-link'))
-      }
-      return new Error().stack
-    } finally {
-      Error.prepareStackTrace = _prepareStackTrace
-    }
+  addCallsite(data) {
+    if (this.log.tracer) this.log.tracer.addCallsite(data, findCaller)
   }
+}
 
-  formatCallSite (frame) {
-    if (!frame) frame = this.getCallSite()
-    if (!frame) return
-
-    const parts = []
-
-    const typeName = frame.getTypeName()
-    if (typeName) {
-      parts.push(typeName)
-      parts.push('.')
-    }
-
-    const functionName = frame.getFunctionName()
-    const methodName = frame.getMethodName()
-    if (functionName) {
-      parts.push(functionName)
-      if (methodName && methodName !== functionName) {
-        parts.push('[as ')
-        parts.push(methodName)
-        parts.push(']')
-      }
-    } else if (methodName) {
-      parts.push(methodName)
-    } else {
-      parts.push('<anonymous>')
-    }
-
-    parts.push(' (')
-    const fileName = frame.getFileName()
-    if (fileName) {
-      parts.push(fileName)
-      const lineNumber = frame.getLineNumber()
-      if (lineNumber) {
-        parts.push(':')
-        parts.push(lineNumber)
-        const columnNumber = frame.getColumnNumber()
-        if (columnNumber) {
-          parts.push(':')
-          parts.push(columnNumber)
-        }
-      }
-    } else if (frame.isNative()) {
-      parts.push('<native>')
-    } else {
-      parts.push('<unknown>')
-    }
-    parts.push(')')
-
-    return parts.join('')
-  }
+const findCaller = stack => {
+  let foundBluefin = false
+  return stack.find(site => {
+    const filename = site.getFileName()
+    if (!filename) return false
+    const includesBluefin = filename.includes('bluefin-link')
+    if (includesBluefin) foundBluefin = true
+    return foundBluefin && !includesBluefin
+  })
 }
 
 module.exports = BaseStrategy
