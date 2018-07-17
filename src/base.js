@@ -5,14 +5,13 @@ const fs = require('fs')
 const path = require('path')
 const Promise = require('bluebird')
 const parseConnectionString = require('pg-connection-string').parse
-const url = require('url')
 
 class BaseStrategy {
-  static disconnect() {
+  static disconnect () {
     return Promise.resolve()
   }
 
-  constructor(_options) {
+  constructor (_options) {
     this.directory = _options.directory
     delete _options.directory
 
@@ -32,19 +31,19 @@ class BaseStrategy {
     this.methods = {
       begin: this.createTxnMethod('begin'),
       commit: this.createTxnMethod('commit'),
-      rollback: this.createTxnMethod('rollback'),
+      rollback: this.createTxnMethod('rollback')
     }
   }
 
-  disconnect() {
+  disconnect () {
     return Promise.resolve()
   }
 
-  hasMethod(name) {
+  hasMethod (name) {
     return name in this.methods
   }
 
-  create(name) {
+  create (name) {
     var text
     var source
     try {
@@ -62,7 +61,7 @@ class BaseStrategy {
     return this.methods[name]
   }
 
-  extractMetaData(text, meta) {
+  extractMetaData (text, meta) {
     const pattern = /^--\*\s+(\w+)\s+(\w+)/g
 
     var match
@@ -73,15 +72,15 @@ class BaseStrategy {
     return meta
   }
 
-  desc(options) {
+  desc (options) {
     return Object.assign({url: this.url}, options)
   }
 
-  genId() {
+  genId () {
     return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf => buf.toString('hex'))
   }
 
-  createLogQueryFn(name, meta) {
+  createLogQueryFn (name, meta) {
     const data = Object.assign({}, meta)
     if (data.source) data.source = this.log.formatPath(data.source)
     this.addCallsite(data)
@@ -93,7 +92,7 @@ class BaseStrategy {
     }
   }
 
-  addCallsite(data) {
+  addCallsite (data) {
     if (this.log.tracer) this.log.tracer.addCallsite(data, findCaller)
   }
 }

@@ -63,7 +63,7 @@ test('includes the error name and message in the stack', t => {
 
     t.is(e.effect.message, 'mock errorWithArguments() threw error')
     t.regex(e.effect.stack, /^Error: mock errorWithArguments\(\) threw error/)
-    t.deepEqual(e.effect.context.arguments, [42,21,96])
+    t.deepEqual(e.effect.context.arguments, [42, 21, 96])
     t.true(e.effect.context.source.endsWith('test/sql/errorWithArguments.sql'))
     t.is(e.effect.context.return, 'row')
   })

@@ -1,5 +1,5 @@
 class StubLog {
-  constructor(context, dimensions) {
+  constructor (context, dimensions) {
     this.context = context
     this.dimensions = dimensions
     this._debug = []
@@ -9,11 +9,11 @@ class StubLog {
     this.metrics = []
   }
 
-  formatPath(filePath) {
+  formatPath (filePath) {
     return filePath
   }
 
-  fail(msg, cause, ...rest) {
+  fail (msg, cause, ...rest) {
     const e = new Error(msg)
     e.context = Object.assign({}, this.context, ...rest)
     if ('stack' in e.context) {
@@ -25,36 +25,36 @@ class StubLog {
     return cause
   }
 
-  debug(msg, ...rest) {
+  debug (msg, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
-    this._debug.push({message, context})
+    this._debug.push({msg, context})
   }
 
-  info(message, ...rest) {
+  info (message, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
     this._info.push({message, context})
   }
 
-  warning(message, ...rest) {
+  warning (message, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
     this._warning.push({message, context})
   }
 
-  error(error) {
+  error (error) {
     this._error.push(error)
   }
 
-  magnitude(name, value, ...rest) {
+  magnitude (name, value, ...rest) {
     const dimensions = Object.assign({}, this.dimensions, ...rest)
     this.metrics.push({name, value, kind: 'magnitude', dimensions: dimensions})
   }
 
-  count(name, value, ...rest) {
+  count (name, value, ...rest) {
     const dimensions = Object.assign({}, this.dimensions, ...rest)
     this.metrics.push({name, value, kind: 'count', dimensions: dimensions})
   }
 
-  begin(name) {
+  begin (name) {
     const begin = process.hrtime()
     return (...rest) => {
       const dimensions = Object.assign({}, this.dimensions, ...rest)

@@ -1,16 +1,16 @@
 const debug = require('debug')('bluefin:link')
 
 class DebugLog {
-  constructor(context, dimensions) {
+  constructor (context, dimensions) {
     this.context = context
     this.dimensions = dimensions
   }
 
-  formatPath(filePath) {
+  formatPath (filePath) {
     return filePath
   }
 
-  fail(msg, cause, ...rest) {
+  fail (msg, cause, ...rest) {
     const effect = new Error(msg)
     effect.context = Object.assign({}, this.context, ...rest)
     for (let i = rest.length - 1; i >= 0; i--) {
@@ -24,28 +24,28 @@ class DebugLog {
     return cause
   }
 
-  log(format, message, context) {
+  log (format, message, context) {
     if (this.context === undefined && context === undefined) return debug(format, message)
     const combined = Object.assign({}, this.context, context)
     debug(format + ' %o', message, combined)
   }
 
-  debug(msg, ...rest) {
+  debug (msg, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
     this.log('debug', msg, context)
   }
 
-  info(message, ...rest) {
+  info (message, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
     this.log('%s', message, context)
   }
 
-  warning(message, ...rest) {
+  warning (message, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
     this.log('WARNING %s', message, context)
   }
 
-  error(error, ...rest) {
+  error (error, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
     this.log('%s', 'Error', context)
     let e = error
@@ -56,17 +56,17 @@ class DebugLog {
     }
   }
 
-  magnitude(name, value, ...rest) {
+  magnitude (name, value, ...rest) {
     const dimensions = Object.assign({}, this.dimensions, ...rest)
     debug('magnitude %s %d %o', name, value, dimensions)
   }
 
-  count(name, value, ...rest) {
+  count (name, value, ...rest) {
     const dimensions = Object.assign({}, this.dimensions, ...rest)
     debug('count %s %d %o', name, value, dimensions)
   }
 
-  begin(name) {
+  begin (name) {
     const begin = process.hrtime()
     return (...rest) => {
       const dimensions = Object.assign({}, this.dimensions, ...rest)

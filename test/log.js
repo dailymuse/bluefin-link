@@ -1,5 +1,3 @@
-import {EALREADY} from 'constants'
-
 const test = require('ava')
 const PgLink = require('../src')
 const StubLog = require('./lib/log')

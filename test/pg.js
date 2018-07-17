@@ -34,7 +34,7 @@ test('error has correct information', t => {
     t.is(cause.context.position, 120)
     t.is(
       cause.context.hint,
-      'There is an entry for table "x", but it cannot be referenced from this part of the query.',
+      'There is an entry for table "x", but it cannot be referenced from this part of the query.'
     )
 
     const effect = cause.effect

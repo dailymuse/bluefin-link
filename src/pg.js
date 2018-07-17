@@ -5,14 +5,13 @@ const Promise = require('bluebird')
 const pg = require('pg')
 const pretry = require('promise-retry')
 
-const time = require('./time')
 const BaseStrategy = require('./base')
 
 const pools = {}
 const ignoreProperties = ['name', 'severity', 'file', 'line', 'routine']
 
 class PgStrategy extends BaseStrategy {
-  static disconnect() {
+  static disconnect () {
     const vows = []
     for (let url in pools) {
       vows.push(pools[url].end())
@@ -21,22 +20,22 @@ class PgStrategy extends BaseStrategy {
     return Promise.all(vows)
   }
 
-  get poolKey() {
+  get poolKey () {
     const hash = new crypto.Hash('md5')
     hash.update(JSON.stringify(this.options))
     return hash.digest('base64')
   }
 
-  getPool() {
+  getPool () {
     const key = this.poolKey
     if (key in pools) return pools[key]
 
     const poolOpts = Object.assign(
       {
         connectionTimeoutMillis: 30000,
-        Promise,
+        Promise
       },
-      this.options,
+      this.options
     )
     const p = new pg.Pool(poolOpts)
     p.on('error', e => this.log.error(e))
@@ -45,7 +44,7 @@ class PgStrategy extends BaseStrategy {
     return p
   }
 
-  connect() {
+  connect () {
     var txnEnd
     var failures = []
 
@@ -89,7 +88,7 @@ class PgStrategy extends BaseStrategy {
     })
   }
 
-  disconnect() {
+  disconnect () {
     const key = this.poolKey
     if (!(key in pools)) return Promise.resolve()
     const pool = pools[key]
@@ -97,7 +96,7 @@ class PgStrategy extends BaseStrategy {
     return pool.end()
   }
 
-  createMethod(name, meta, text) {
+  createMethod (name, meta, text) {
     var fn
     switch (meta.return) {
       case 'value':
@@ -122,10 +121,10 @@ class PgStrategy extends BaseStrategy {
     return this.createMethodWithCallback(name, meta, text, fn)
   }
 
-  createMethodWithCallback(name, meta, text, extract) {
+  createMethodWithCallback (name, meta, text, extract) {
     const logQuery = this.createLogQueryFn(name, meta)
     const {options, log} = this
-    const method = function() {
+    const method = function () {
       const queryEnd = log.begin('pg.query.duration')
       const args = [...arguments].map(format)
       const context = {arguments: args}
@@ -149,8 +148,8 @@ class PgStrategy extends BaseStrategy {
     return method
   }
 
-  createTxnMethod(sql) {
-    return function() {
+  createTxnMethod (sql) {
+    return function () {
       const context = {'connection-id': this._id, callsite: undefined}
       this._log.info(sql, context)
 
@@ -168,7 +167,7 @@ class PgStrategy extends BaseStrategy {
 
 module.exports = PgStrategy
 
-function format(v) {
+function format (v) {
   if (v === null || v === undefined) return null
   else if (v instanceof Array) return v.map(format)
   else if (v instanceof Buffer) return '\\x' + v.toString('hex')
@@ -176,7 +175,7 @@ function format(v) {
   else return v
 }
 
-function rebuildError(pge) {
+function rebuildError (pge) {
   const error = new Error(pge.message)
   error.stack = pge.stack.replace('error: ', 'Error: ')
   error.context = {}

@@ -3,7 +3,6 @@
 const Promise = require('bluebird')
 
 const BaseStrategy = require('./base')
-const time = require('./time')
 
 class MockStrategy extends BaseStrategy {
   constructor (options, mocks) {
