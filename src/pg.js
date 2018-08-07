@@ -26,7 +26,7 @@ class PgStrategy extends BaseStrategy {
     return hash.digest('base64')
   }
 
-  getPool () {
+  getPool (log) {
     const key = this.poolKey
     if (key in pools) return pools[key]
 
@@ -38,21 +38,21 @@ class PgStrategy extends BaseStrategy {
       this.options
     )
     const p = new pg.Pool(poolOpts)
-    p.on('error', e => this.log.error(e))
+    p.on('error', e => log.error(e))
     pools[key] = p
 
     return p
   }
 
-  connect () {
+  connect (log) {
     var txnEnd
     var failures = []
 
     const idvow = this.genId()
-    const pool = this.getPool()
+    const pool = this.getPool(log)
     const dimensions = {host: this.options.host}
     const context = {}
-    this.addCallsite(context)
+    this.addCallsite(log, context)
     const info = (id, ms) => {
       const info = {clients: pool.totalCount, idle: pool.idleCount, waiting: pool.waitingCount}
       if (id !== undefined) info['connection-id'] = id
@@ -60,11 +60,11 @@ class PgStrategy extends BaseStrategy {
       return Object.assign(info, context, dimensions)
     }
 
-    const connectEnd = this.log.begin('pg.connect.duration')
+    const connectEnd = log.begin('pg.connect.duration')
 
     const retryOpts = Object.assign({randomize: true, maxTimeout: 8000}, this.options)
     const cvow = pretry(retryOpts, retry => {
-      this.log.info('connecting', info())
+      log.debug('connecting', info())
       return pool.connect().catch(err => {
         failures.push(err.message)
         retry(err)
@@ -72,19 +72,20 @@ class PgStrategy extends BaseStrategy {
     }).catch(err => {
       const context = Object.assign(retryOpts, {attempts: failures.length, messages: failures})
       context.ms = connectEnd(info()) * 1e-3
-      throw this.log.fail('Failed to connect to database', err, context)
+      log.fail('Failed to connect to database', err, context)
+      throw err
     })
 
     return Promise.join(idvow, cvow, (_id, _client) => {
       const ms = connectEnd(dimensions) * 1e-3
-      this.log.info('connected', info(_id, ms))
-      this.log.count('pg.connect.retries', failures.length, dimensions)
-      txnEnd = this.log.begin('pg.connection.duration')
-      return {_id, _client, _log: this.log}
+      log.debug('connected', info(_id, ms))
+      log.count('pg.connect.retries', failures.length, dimensions)
+      txnEnd = log.begin('pg.connection.duration')
+      return {_id, _client, _log: log}
     }).disposer(connection => {
       const ms = txnEnd(dimensions) * 1e-3
       connection._client.release()
-      this.log.info('disconnected', info(connection._id, ms))
+      connection._log.debug('disconnected', info(connection._id, ms))
     })
   }
 
@@ -122,13 +123,12 @@ class PgStrategy extends BaseStrategy {
   }
 
   createMethodWithCallback (name, meta, text, extract) {
-    const logQuery = this.createLogQueryFn(name, meta)
-    const {options, log} = this
-    const method = function () {
-      const queryEnd = log.begin('pg.query.duration')
-      const args = [...arguments].map(format)
-      const context = {arguments: args}
-      Object.assign(context, meta)
+    const {addCallsite, logQuery, options} = this
+    const method = function (...args) {
+      const queryEnd = this._log.begin('pg.query.duration')
+      args = args.map(format)
+      const context = Object.assign({arguments: args}, meta)
+      addCallsite(this._log, context)
       Error.captureStackTrace(context, method)
 
       // query() will return a native Promise, but we want a bluebird promise,
@@ -136,7 +136,7 @@ class PgStrategy extends BaseStrategy {
       return Promise.fromCallback(cb => this._client.query(text, args, cb))
         .then(result => {
           const microseconds = queryEnd({host: options.host, query: name})
-          logQuery(this._id, microseconds, args)
+          logQuery(this, meta, context, microseconds)
           return extract(result)
         })
         .catch(opErr => {

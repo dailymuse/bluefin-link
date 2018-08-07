@@ -20,11 +20,6 @@ const checkLinkArgs = (options, segments, cb) => {
   return options
 }
 
-const customizeLog = log => {
-  if (typeof log.child === 'function') log = log.child('link')
-  return log
-}
-
 class Link {
   static parseInt8AsJsNumber () {
     // this can lead to numerical errors for values greater than 2^32, because
@@ -37,17 +32,9 @@ class Link {
     return PgStrategy.disconnect()
   }
 
-  static get log () {
-    return this._log
-  }
-
-  static set log (log) {
-    this._log = customizeLog(log)
-  }
-
   constructor (strategy) {
     this.strategy = strategy
-    if (!('log' in strategy)) strategy.log = this.constructor.log
+    this.log = this.constructor.log
   }
 
   get options () {
@@ -58,16 +45,8 @@ class Link {
     return this.strategy.directory
   }
 
-  get log () {
-    return this.strategy.log
-  }
-
-  set log (log) {
-    this.strategy.log = customizeLog(log)
-  }
-
   connect (fn) {
-    const disposer = this.strategy.connect()
+    const disposer = this.strategy.connect(this.log)
     return Promise.using(disposer, connection => {
       const handler = new Handler(this.strategy)
       const proxy = new Proxy(connection, handler)
