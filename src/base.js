@@ -80,20 +80,14 @@ class BaseStrategy {
     return Promise.fromCallback(cb => crypto.randomBytes(3, cb)).then(buf => buf.toString('hex'))
   }
 
-  createLogQueryFn (name, meta) {
-    const data = Object.assign({}, meta)
-    if (data.source) data.source = this.log.formatPath(data.source)
-    this.addCallsite(data)
-    return (id, microseconds, args) => {
-      data['connection-id'] = id
-      data.ms = microseconds / 1000
-      data.arguments = args.map(p => (Buffer.isBuffer(p) ? '\\x' + p.toString('hex') : p))
-      this.log.info('query', data)
-    }
+  logQuery (target, meta, call, microseconds) {
+    const context = {id: target._id, ms: microseconds / 100}
+    if (meta.source) context.source = target._log.formatPath(meta.source)
+    target._log.info('query', meta, call, context)
   }
 
-  addCallsite (data) {
-    if (this.log.tracer) this.log.tracer.addCallsite(data, findCaller)
+  addCallsite (log, context) {
+    if (log.tracer) log.tracer.addCallsite(context, findCaller)
   }
 }
 

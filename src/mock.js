@@ -10,15 +10,15 @@ class MockStrategy extends BaseStrategy {
     this.mocks = mocks
   }
 
-  connect () {
-    const connectEnd = this.log.begin('mock.connect.duration')
+  connect (log) {
+    const connectEnd = log.begin('mock.connect.duration')
     var txnEnd
     return this.genId()
       .then(_id => {
         connectEnd({host: this.options.host})
-        this.log.count('mock.connect.retries', 0, {host: this.options.host})
-        txnEnd = this.log.begin('mock.connection.duration')
-        return {_id, _log: this.log}
+        log.count('mock.connect.retries', 0, {host: this.options.host})
+        txnEnd = log.begin('mock.connection.duration')
+        return {_id, _log: log}
       })
       .disposer(() => {
         txnEnd({host: this.options.host})
@@ -26,14 +26,12 @@ class MockStrategy extends BaseStrategy {
   }
 
   createMethod (name, meta, text) {
-    const logQuery = this.createLogQueryFn(name, meta)
     const checkResult = this.createCheckResultFn(name, meta)
-    const {options, mocks, log} = this
-    const method = function () {
-      const queryEnd = log.begin('mock.query.duration')
-      const args = [...arguments]
-      const context = {arguments: args}
-      Object.assign(context, meta)
+    const {addCallsite, logQuery, options, mocks} = this
+    const method = function (...args) {
+      const queryEnd = this._log.begin('mock.query.duration')
+      const context = Object.assign({arguments: args}, meta)
+      addCallsite(this._log, context)
       Error.captureStackTrace(context, method)
 
       // make sure we have a mock for this query
@@ -47,16 +45,16 @@ class MockStrategy extends BaseStrategy {
         process.nextTick(() => {
           let result = mock
           const microseconds = queryEnd({host: options.host, query: name})
-          logQuery(this._id, microseconds, args)
+          logQuery(this, meta, context, microseconds)
           if (typeof mock === 'function') {
             try {
               result = mock.apply(this, args)
             } catch (e) {
-              log.fail(`mock ${name}() threw error`, e, context)
+              this._log.fail(`mock ${name}() threw error`, e, context)
               return reject(e)
             }
           }
-          checkResult(result, context, resolve, reject)
+          checkResult(this._log, result, context, resolve, reject)
         })
       })
     }
@@ -64,8 +62,7 @@ class MockStrategy extends BaseStrategy {
   }
 
   createCheckResultFn (name, meta) {
-    const log = this.log
-    return function (result, context, resolve, reject) {
+    return function (log, result, context, resolve, reject) {
       const fail = msg => {
         const cause = new Error(msg)
         cause.context = {result}
