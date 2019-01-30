@@ -35,6 +35,6 @@ module.exports.mock = (name, mockError, context) => {
 
 module.exports.result = (message, result, context) => {
   const cause = new Error(message)
-  cause.context = {result}
+  cause.context = { result }
   return fail('incorrect result from mock', cause, context, 'QueryFailed')
 }

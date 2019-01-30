@@ -27,17 +27,17 @@ class StubLog {
 
   debug (msg, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
-    this._debug.push({msg, context})
+    this._debug.push({ msg, context })
   }
 
   info (message, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
-    this._info.push({message, context})
+    this._info.push({ message, context })
   }
 
   warning (message, ...rest) {
     const context = Object.assign({}, this.context, ...rest)
-    this._warning.push({message, context})
+    this._warning.push({ message, context })
   }
 
   error (error) {
@@ -46,12 +46,12 @@ class StubLog {
 
   magnitude (name, value, ...rest) {
     const dimensions = Object.assign({}, this.dimensions, ...rest)
-    this.metrics.push({name, value, kind: 'magnitude', dimensions: dimensions})
+    this.metrics.push({ name, value, kind: 'magnitude', dimensions: dimensions })
   }
 
   count (name, value, ...rest) {
     const dimensions = Object.assign({}, this.dimensions, ...rest)
-    this.metrics.push({name, value, kind: 'count', dimensions: dimensions})
+    this.metrics.push({ name, value, kind: 'count', dimensions: dimensions })
   }
 
   begin (name) {

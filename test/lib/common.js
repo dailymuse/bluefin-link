@@ -28,7 +28,7 @@ module.exports = test => {
   })
 
   test('executes a row function', t => {
-    t.context.Link.fn.selectIntegerAndString = {number: 42, str: 'abc'}
+    t.context.Link.fn.selectIntegerAndString = { number: 42, str: 'abc' }
     return t.context.db
       .connect(c => {
         return c.selectIntegerAndString(42, 'abc')
@@ -41,15 +41,15 @@ module.exports = test => {
 
   test('executes a table function', t => {
     t.context.Link.fn.selectSeries = [
-      {num: 0},
-      {num: 1},
-      {num: 2},
-      {num: 3},
-      {num: 4},
-      {num: 5},
-      {num: 6},
-      {num: 7},
-      {num: 8}
+      { num: 0 },
+      { num: 1 },
+      { num: 2 },
+      { num: 3 },
+      { num: 4 },
+      { num: 5 },
+      { num: 6 },
+      { num: 7 },
+      { num: 8 }
     ]
     return t.context.db
       .connect(c => {
@@ -69,17 +69,17 @@ module.exports = test => {
       command: 'SELECT',
       rowCount: 9,
       rows: [
-        {num: 0},
-        {num: 1},
-        {num: 2},
-        {num: 3},
-        {num: 4},
-        {num: 5},
-        {num: 6},
-        {num: 7},
-        {num: 8}
+        { num: 0 },
+        { num: 1 },
+        { num: 2 },
+        { num: 3 },
+        { num: 4 },
+        { num: 5 },
+        { num: 6 },
+        { num: 7 },
+        { num: 8 }
       ],
-      fields: [{name: 'num'}]
+      fields: [{ name: 'num' }]
     }
     return t.context.db
       .connect(c => {
@@ -107,7 +107,7 @@ module.exports = test => {
   })
 
   test('executes queries in a transaction', t => {
-    const {Link, db} = t.context
+    const { Link, db } = t.context
     Link.fn.insertN = () => {}
     Link.fn.zeroN = () => {}
     Link.fn.sumN = 42
@@ -127,7 +127,7 @@ module.exports = test => {
   })
 
   test('automatically rolls back transactions', t => {
-    const {db, Link} = t.context
+    const { db, Link } = t.context
     Link.fn.error = () => {
       throw new Error('column "this_column_doesnt_exist" does not exist')
     }
@@ -148,7 +148,7 @@ module.exports = test => {
   })
 
   test('QueryFailed includes context', t => {
-    const {db, Link} = t.context
+    const { db, Link } = t.context
 
     Link.fn.errorWithArguments = () => {
       throw new Error('whiffle')

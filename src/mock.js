@@ -15,22 +15,22 @@ class MockStrategy extends BaseStrategy {
     var txnEnd
     return this.genId()
       .then(_id => {
-        connectEnd({host: this.options.host})
-        log.count('mock.connect.retries', 0, {host: this.options.host})
+        connectEnd({ host: this.options.host })
+        log.count('mock.connect.retries', 0, { host: this.options.host })
         txnEnd = log.begin('mock.connection.duration')
-        return {_id, _log: log}
+        return { _id, _log: log }
       })
       .disposer(() => {
-        txnEnd({host: this.options.host})
+        txnEnd({ host: this.options.host })
       })
   }
 
   createMethod (name, meta, text) {
     const checkResult = this.createCheckResultFn(name, meta)
-    const {addCallsite, logQuery, options, mocks} = this
+    const { addCallsite, logQuery, options, mocks } = this
     const method = function (...args) {
       const queryEnd = this._log.begin('mock.query.duration')
-      const context = Object.assign({arguments: args}, meta)
+      const context = Object.assign({ arguments: args }, meta)
       addCallsite(this._log, context)
       Error.captureStackTrace(context, method)
 
@@ -44,7 +44,7 @@ class MockStrategy extends BaseStrategy {
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
           let result = mock
-          const microseconds = queryEnd({host: options.host, query: name})
+          const microseconds = queryEnd({ host: options.host, query: name })
           logQuery(this, meta, context, microseconds)
           if (typeof mock === 'function') {
             try {
@@ -65,7 +65,7 @@ class MockStrategy extends BaseStrategy {
     return function (log, result, context, resolve, reject) {
       const fail = msg => {
         const cause = new Error(msg)
-        cause.context = {result}
+        cause.context = { result }
         log.fail('incorrect result from mock', cause, context)
         reject(cause)
       }
@@ -104,7 +104,7 @@ class MockStrategy extends BaseStrategy {
 
   createTxnMethod (sql) {
     return function () {
-      this._log.info(sql, {'connection-id': this._id})
+      this._log.info(sql, { 'connection-id': this._id })
       return new Promise((resolve, reject) => {
         process.nextTick(() => {
           resolve()

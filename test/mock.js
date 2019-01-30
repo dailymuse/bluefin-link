@@ -53,7 +53,7 @@ test('accepts a undefined mock row', t => {
 })
 
 test('includes the error name and message in the stack', t => {
-  const {db, Link} = t.context
+  const { db, Link } = t.context
   Link.fn.errorWithArguments = () => {
     throw new Error('whiffle')
   }
@@ -70,7 +70,7 @@ test('includes the error name and message in the stack', t => {
 })
 
 test('clears mocks', t => {
-  const {db, Link} = t.context
+  const { db, Link } = t.context
   Link.fn.nurp = () => {
     t.fail('should never be called')
   }

@@ -1,5 +1,5 @@
 const test = require('ava')
-const {Client} = require('pg')
+const { Client } = require('pg')
 
 const PgLink = require('../src')
 const common = require('./lib/common')

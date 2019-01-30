@@ -53,7 +53,7 @@ class BaseStrategy {
       return undefined
     }
 
-    const meta = {source}
+    const meta = { source }
     this.extractMetaData(text, meta)
 
     const fn = this.createMethod(name, meta, text)
@@ -73,7 +73,7 @@ class BaseStrategy {
   }
 
   desc (options) {
-    return Object.assign({url: this.url}, options)
+    return Object.assign({ url: this.url }, options)
   }
 
   genId () {
@@ -81,7 +81,7 @@ class BaseStrategy {
   }
 
   logQuery (target, meta, call, microseconds) {
-    const context = {id: target._id, ms: microseconds / 100}
+    const context = { id: target._id, ms: microseconds / 100 }
     if (meta.source) context.source = target._log.formatPath(meta.source)
     target._log.info('query', meta, call, context)
   }

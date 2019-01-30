@@ -10,7 +10,7 @@ const PgStrategy = require('./pg.js')
 const checkLinkArgs = (options, segments, cb) => {
   if (segments.length < 1) throw new Error('No query directory specified')
 
-  options = typeof options === 'string' ? {connectionString: options} : options
+  options = typeof options === 'string' ? { connectionString: options } : options
   if (options.connectionString === undefined) {
     throw new Error('No url specified')
   }
