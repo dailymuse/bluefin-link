@@ -79,9 +79,7 @@ jobs:
       - checkout
       - run:
           name: Install & Setup Postgres
-          command: |
-            docker run apt-get update
-            docker run apt-get-install postgresql-10
+          command: sudo ./bin/psql-install
       - run: *start_vpn
       - run: *wait_for_vpn
       - run: *login_to_ecr
