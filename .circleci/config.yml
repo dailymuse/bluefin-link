@@ -80,7 +80,7 @@ jobs:
       - run:
           name: Install & Setup Postgres
           command: |
-            sudo ./bluefin-link/bin/psql-install
+            sudo ./bin/psql-install
       - run: *start_vpn
       - run: *wait_for_vpn
       - run: *login_to_ecr
