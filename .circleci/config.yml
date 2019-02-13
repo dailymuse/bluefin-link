@@ -79,7 +79,8 @@ jobs:
       - checkout
       - run:
           name: Install & Setup Postgres
-          command: sudo ./bin/psql-install
+          command: |
+            sudo ./bluefin-link/bin/psql-install
       - run: *start_vpn
       - run: *wait_for_vpn
       - run: *login_to_ecr
