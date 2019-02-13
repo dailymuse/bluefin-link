@@ -9,7 +9,7 @@
   "scripts": {
     "format": "standard-format --write",
     "just-test": "./bin/local-test-only",
-    "lint": "standard",
+    "standard": "standard",
     "test": "./bin/local-test",
     "test:watch": "./bin/local-test-watch",
     "coverage": "./bin/local-coverage"
