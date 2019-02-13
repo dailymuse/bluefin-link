@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+export PATH="node_modules/.bin:$PATH"
+export ALLOW_CONFIG_MUTATIONS=true
+export NODE_ENV=staging-test
+export TZ=UTC
+
+yarn install
+
+# Run Standard
+standard &&
+
+# Run tests
+nyc ava --tap > test-output.txt && nyc report --reporter=cobertura

@@ -1,0 +1,120 @@
+version: 2
+
+defaults: &defaults
+  working_directory: ~/bluefin-link
+  environment:
+    - TOOLS_IMAGE=themuse/tools:${TOOLS_VERSION:-2.5.8}
+  machine:
+    enabled: true
+    image: circleci/classic:201711-01
+    docker_layer_caching: true
+
+login_to_ecr: &login_to_ecr
+  name: Login to ECR
+  command: |
+    docker run \
+      --rm \
+      -e AWS_ACCESS_KEY_ID \
+      -e AWS_SECRET_ACCESS_KEY \
+      -e AWS_DEFAULT_REGION \
+      -v /var/run/docker.sock:/var/run/docker.sock \
+      -v $HOME/.docker:/root/.docker \
+      "themuse/tools:${TOOLS_VERSION:-2.5.8}" \
+      ecr-login
+    sudo chown -R circleci:circleci $HOME/.docker
+
+start_vpn: &start_vpn
+  name: Startup OpenVPN
+  background: true
+  command: |
+    # Download configuration
+    aws s3 sync s3://themuse-ops/ci/vpn ./vpn
+    # Startup vpn
+    docker run \
+      --name=ovpn \
+      --cap-add=NET_ADMIN \
+      --dns=10.0.0.2 \
+      --dns=10.0.0.3 \
+      --device=/dev/net/tun \
+      -v $PWD/vpn:/app/vpn \
+      -w /app/vpn \
+      "themuse/tools:${TOOLS_VERSION:-2.5.8}" openvpn --config config.conf
+
+wait_for_vpn: &wait_for_vpn
+  name: Wait for VPN
+  command: |
+    # Wait until we get the container itself
+    while test -z "$(docker ps -q -f name=ovpn)"; do sleep 1; done
+    # Test connectivity
+    docker run \
+      --rm \
+      --network=container:ovpn \
+      "themuse/tools:${TOOLS_VERSION:-2.5.8}" \
+      host -R 3 -W 5 inf.themuse.com 10.0.0.2
+  no_output_timeout: 3m
+
+gen_npmrc: &gen_npmrc
+  name: Gen npmrc
+  command: |
+    rm -f .npmrc
+    echo '@themuse:registry=https://verdaccio.inf.themuse.com/'  >> .npmrc
+    echo "//verdaccio.inf.themuse.com/:_authToken=${NPM_AUTH_TOKEN}" >> .npmrc
+
+build: &build
+  name: Build
+  command: docker build --build-arg NODE_ENV=${NODE_ENV:-development} --network=container:ovpn -t bluefin-link .
+
+jobs:
+  build:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: *start_vpn
+      - run: *wait_for_vpn
+      - run: *login_to_ecr
+      - run: *build
+  test:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: *start_vpn
+      - run: *wait_for_vpn
+      - run: *login_to_ecr
+      - run: *build
+      - run:
+          name: Execute Tests & coverage
+          command: |
+            docker run --rm bluefin-link yarn run test
+            docker run -e "CODECOV_TOKEN=$CODECOV_TOKEN" --rm bluefin-link yarn run coverage
+  publish:
+    <<: *defaults
+    steps:
+      - checkout
+      - run: *start_vpn
+      - run: *wait_for_vpn
+      - run: *gen_npmrc
+      - run:
+          name: Publish
+          command: |
+            if [ $CIRCLE_BRANCH = 'master' ]; then
+              scripts/docker-run yarn publish --tag latest
+            else
+              PACKAGE_VERSION=$(cat package.json | jq .version -r)
+              PACKAGE_NAME=$(cat package.json | jq .name -r)
+              # Convert the branch name to a valid yarn dist tag value
+              DIST_TAG=$(docker run --rm "themuse/tools:${TOOLS_VERSION:-2.5.8}" generate-deployment-id $CIRCLE_BRANCH)
+              scripts/docker-run yarn --no-git-tag-version --new-version version "$PACKAGE_VERSION-build-$CIRCLE_BUILD_NUM"
+              scripts/docker-run yarn publish --tag $DIST_TAG
+              echo "To install via dist-tag: yarn install --save $PACKAGE_NAME@$DIST_TAG"
+            fi
+
+workflows:
+  version: 2
+  primary:
+    jobs:
+      - build
+      - test
+      - publish:
+          requires:
+            - build
+            - test

@@ -1,9 +1,22 @@
 {
-  "name": "bluefin-link",
+  "name": "@themuse/bluefin-link",
   "version": "0.4.0",
   "description": "A better interface for postgesql queries",
   "main": "src/index.js",
+  "repository": "git@github.com:dailymuse/bluefin-link.git",
+  "author": "Daily Muse, Inc.",
   "license": "MIT",
+  "scripts": {
+    "format": "standard-format --write",
+    "just-test": "./bin/local-test-only",
+    "lint": "standard",
+    "test": "./bin/local-test",
+    "test:watch": "./bin/local-test-watch",
+    "coverage": "./bin/local-coverage"
+  },
+  "publishConfig": {
+    "registry": "https://verdaccio.inf.themuse.com"
+  },
   "dependencies": {
     "debug": "~4.1.1",
     "pg": "~7.8.0",
@@ -12,15 +25,9 @@
   },
   "devDependencies": {
     "ava": "~1.2.0",
+    "codecov": "~3.1.0",
+    "nyc": "~13.1.0",
     "sinon": "~7.2.3",
     "standard": "~12.0.1"
-  },
-  "ava": {
-    "files": [
-      "test/*.js"
-    ],
-    "sources": [
-      "src/*.js"
-    ]
   }
 }
