@@ -87,6 +87,7 @@ jobs:
             sudo ./scripts/psql-install
             sudo -u postgres psql -c "alter system set listen_addresses = '*'"
             sudo -u postgres psql -c 'create database test;'
+            sudo service postgresql restart
       - run:
           name: Execute Tests & coverage
           command: |
