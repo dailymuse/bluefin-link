@@ -17,4 +17,3 @@ test-output.txt
 
 # test coverage
 .nyc_output
-coverage/
