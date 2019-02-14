@@ -34,7 +34,7 @@
     "files": [
       "test/*.js",
       "!test/lib/**/*.js",
-      "!test/manual/**/*.js",
+      "!test/manual/**/*.js"
     ],
       "sources": [
       "index.js",
