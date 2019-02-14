@@ -35,10 +35,6 @@
       "test/*.js",
       "!test/lib/**/*.js",
       "!test/manual/**/*.js"
-    ],
-      "sources": [
-      "index.js",
-      "joi.js"
     ]
   }
 }
