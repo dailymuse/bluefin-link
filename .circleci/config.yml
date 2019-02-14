@@ -81,6 +81,13 @@ jobs:
       - run: *login_to_ecr
       - run: *build
       - run:
+          name: Install Postgres & Create Test DB
+          command: |
+            sudo ./scripts/psql-install
+            sudo -u postgres psql -c "alter system set listen_addresses = '*'"
+            sudo -u postgres psql -c 'create database test;'
+            sudo service postgresql restart
+      - run:
           name: Execute Tests & coverage
           command: |
             docker-compose run --rm bluefin-link yarn run test
