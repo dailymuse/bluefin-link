@@ -4,7 +4,7 @@ const { Client } = require('pg')
 const PgLink = require('../src')
 const common = require('./lib/common')
 
-const dbUrl = 'pg:///test'
+const dbUrl = 'postgres://postgres:postgres@pg:5432/test'
 
 let db
 const client = new Client(dbUrl)

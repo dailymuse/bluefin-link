@@ -5,7 +5,7 @@ const pg = require('pg')
 
 const Link = require('../src')
 
-const dbUrl = 'pg:///test'
+const dbUrl = 'postgres://postgres:postgres@pg:5432/test'
 const db = new Link(dbUrl, __dirname, 'sql')
 
 let int8Parser
