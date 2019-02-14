@@ -15,7 +15,7 @@ services:
       - pg
 
   pg:
-    image: postgres:10-alpine
+    image: postgres:11-alpine
     ports:
       - 5432:5432
     environment:
