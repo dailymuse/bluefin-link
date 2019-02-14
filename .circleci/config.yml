@@ -77,18 +77,20 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run:
-          name: Install & Setup Postgres
-          command: |
-            sudo ./bin/psql-install
       - run: *start_vpn
       - run: *wait_for_vpn
       - run: *login_to_ecr
       - run: *build
       - run:
+          name: Install Postgres & Create Test DB
+          command: |
+            sudo ./scripts/psql-install
+            sudo -u postgres psql -c "alter system set listen_addresses = '*'"
+            sudo -u postgres psql -c 'create database test;'
+      - run:
           name: Execute Tests & coverage
           command: |
-            docker run --rm bluefin-link yarn run test
+            docker run -e PGHOST=`hostname -i` -e PGPORT=5432 -e PGUSER=postgres --rm bluefin-link yarn run test
             docker run -e "CODECOV_TOKEN=$CODECOV_TOKEN" --rm bluefin-link yarn run coverage
   publish:
     <<: *defaults
