@@ -2,7 +2,7 @@ const test = require('ava')
 const PgLink = require('../src')
 const path = require('path')
 
-const dbUrl = 'pg:///test'
+const dbUrl = 'postgres://postgres:postgres@pg:5432/test'
 const sourceDir = path.join(__dirname, 'sql')
 
 /*

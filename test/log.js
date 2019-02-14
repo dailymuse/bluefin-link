@@ -2,12 +2,14 @@ const test = require('ava')
 const PgLink = require('../src')
 const StubLog = require('./lib/log')
 
+const dbUrl = 'postgres://postgres:postgres@pg:5432/test'
+
 test('mock logs queries to a custom log', t => {
   const log = new StubLog()
   const Link = PgLink.mock()
   Link.fn.selectInteger = 42
   Link.log = log
-  const db = new Link('pg:///test', __dirname, 'sql')
+  const db = new Link(dbUrl, __dirname, 'sql')
   return db.connect(sql => sql.selectInteger(1)).then(() => {
     t.is(log._info.length, 1)
     t.is(log._info[0].message, 'query')
@@ -20,7 +22,7 @@ test('mock logs queries to a custom log', t => {
 test('pg logs queries to a custom log', t => {
   const log = new StubLog()
   PgLink.log = log
-  const db = new PgLink('pg:///test', __dirname, 'sql')
+  const db = new PgLink(dbUrl, __dirname, 'sql')
   return db.connect(sql => sql.selectInteger(1)).then(() => {
     const entry = log._info.find(ea => ea.message === 'query')
     t.not(entry, undefined)

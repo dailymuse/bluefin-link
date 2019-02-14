@@ -1,7 +1,7 @@
 const test = require('ava')
 const Link = require('../src')
 
-const dbUrl = 'postgres:///test'
+const dbUrl = 'postgres://postgres:postgres@pg:5432/test'
 
 test('requires a URL', t => {
   t.throws(() => new Link(), Error)
