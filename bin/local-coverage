@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+
+export PATH="node_modules/.bin:$PATH"
+export ALLOW_CONFIG_MUTATIONS=true
+export NODE_ENV=test
+export TZ=UTC
+
+# Run Standard
+standard &&
+
+# Run tests
+nyc ava && nyc report --reporter=lcov text
+./node_modules/.bin/codecov -t $CODECOV_TOKEN

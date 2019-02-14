@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+export PATH="node_modules/.bin:$PATH"
+export ALLOW_CONFIG_MUTATIONS=true
+export NODE_ENV=test
+export TZ=UTC
+
+# Run tests
+ava

@@ -1,9 +1,19 @@
-# Dependency directory
-node_modules
+# modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+node_modules/
+coverage/
+coverage.lcov
+
+# IDEs
+.vscode/
+.idea/
 
 # macOS
 .DS_Store
 
-# IDEs
-.vscode
-.idea/
+test-output.txt
+
+# test coverage
+.nyc_output
