@@ -16,7 +16,7 @@ test("pg error", t => {
   return db
     .connect(c => c.semanticError())
     .catch(e => {
-      t.true(e.effect.stack.includes(`${__filename}:16:28`));
+      t.true(e.effect.stack.includes(`${__filename}:17:21`));
     });
 });
 
@@ -30,6 +30,6 @@ test("mock error", t => {
     .connect(c => c.semanticError())
     .catch(e => {
       t.is(e.message, "whiffle");
-      t.true(e.effect.stack.includes(`${__filename}:27:28`));
+      t.true(e.effect.stack.includes(`${__filename}:30:21`));
     });
 });
