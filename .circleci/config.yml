@@ -95,17 +95,20 @@ jobs:
       - run:
           name: Publish
           command: |
-            if [ $CIRCLE_BRANCH = 'master' ]; then
-              scripts/docker-run yarn publish --tag latest
-            else
-              PACKAGE_VERSION=$(cat package.json | jq .version -r)
-              PACKAGE_NAME=$(cat package.json | jq .name -r)
-              # Convert the branch name to a valid yarn dist tag value
-              DIST_TAG=$(docker run --rm "themuse/tools:${TOOLS_VERSION:-2.5.8}" generate-deployment-id $CIRCLE_BRANCH)
-              scripts/docker-run yarn --no-git-tag-version --new-version version "$PACKAGE_VERSION-build-$CIRCLE_BUILD_NUM"
-              scripts/docker-run yarn publish --tag $DIST_TAG
-              echo "To install via dist-tag: yarn install --save $PACKAGE_NAME@$DIST_TAG"
-            fi
+            package_name=$(cat package.json | jq .name -r)
+            package_version=$(cat package.json | jq .version -r)
+            dist_tag=$(docker run --rm "themuse/tools:${TOOLS_VERSION:-2.5.8}" generate-deployment-id $CIRCLE_BRANCH)
+            docker run \
+              --rm \
+              --network=container:ovpn \
+              --user root \
+              -v $(pwd):/app/workspace \
+              -w /app/workspace \
+              --env NPM_AUTH_TOKEN \
+              --env GEMFURY_PUSH_TOKEN \
+              circleci/node:10 \
+              ./ci/publish $package_name $package_version $dist_tag $CIRCLE_BUILD_NUM $CIRCLE_BRANCH
+            echo "To install via dist-tag: npm install --save $PACKAGE_NAME@$DIST_TAG"
 
 workflows:
   version: 2
