@@ -7,8 +7,8 @@ export ALLOW_CONFIG_MUTATIONS=true
 export NODE_ENV=test
 export TZ=UTC
 
-# Run Standard
-standard &&
+# Run Linter
+yarn run lint:ts
 
 # Run tests
 ava
