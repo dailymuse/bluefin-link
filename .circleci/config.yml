@@ -51,16 +51,9 @@ wait_for_vpn: &wait_for_vpn
       host -R 3 -W 5 inf.themuse.com 10.0.0.2
   no_output_timeout: 3m
 
-gen_npmrc: &gen_npmrc
-  name: Gen npmrc
-  command: |
-    rm -f .npmrc
-    echo '@themuse:registry=https://verdaccio.inf.themuse.com/'  >> .npmrc
-    echo "//verdaccio.inf.themuse.com/:_authToken=${NPM_AUTH_TOKEN}" >> .npmrc
-
 build: &build
   name: Build
-  command: docker build --build-arg NODE_ENV=${NODE_ENV:-development} --network=container:ovpn -t bluefin-link .
+  command: docker build --build-arg GEMFURY_TOKEN --build-arg NODE_ENV=${NODE_ENV:-development} -t bluefin-link .
 
 version: 2
 jobs:
@@ -91,7 +84,6 @@ jobs:
       - checkout
       - run: *start_vpn
       - run: *wait_for_vpn
-      - run: *gen_npmrc
       - run:
           name: Publish
           command: |
@@ -105,7 +97,7 @@ jobs:
               -v $(pwd):/app/workspace \
               -w /app/workspace \
               --env NPM_AUTH_TOKEN \
-              --env GEMFURY_PUSH_TOKEN \
+              --env GEMFURY_TOKEN=$GEMFURY_PUSH_TOKEN \
               circleci/node:10 \
               ./ci/publish $package_name $package_version $dist_tag $CIRCLE_BUILD_NUM $CIRCLE_BRANCH
             echo "To install via dist-tag: npm install --save $PACKAGE_NAME@$DIST_TAG"

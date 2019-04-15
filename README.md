@@ -12,6 +12,8 @@ A better interface to PostgresSQL databases
 
 `yarn install`
 
+> Bluefin-link pulls in a few packages from Gemfury, our private npm registry, in order to install these packages locally you need to have an environment variable on your system called `GEMFURY_TOKEN`, a token can be generated from your Gemfury account.
+
 ## Testing
 
 `yarn run test`
