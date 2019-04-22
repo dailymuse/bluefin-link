@@ -2,7 +2,6 @@
 #!/bin/bash
 docker run \
     --rm \
-    --network=container:ovpn \
     --user root \
     -v $(pwd):/app/workspace \
     -w /app/workspace \

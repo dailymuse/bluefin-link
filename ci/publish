@@ -11,28 +11,9 @@ circle_branch="$5"
 if [[ $circle_branch == "master" ]]; then
     # Publish to Gemfury
     yarn publish --tag latest --new-version $package_version
-
-    # Overwrite .npmrc to point to Verdaccio
-    rm .npmrc
-    echo '@themuse:registry=https://verdaccio.inf.themuse.com/' >> .npmrc
-    url="//verdaccio.inf.themuse.com/:_authToken=${NPM_AUTH_TOKEN}"
-    echo $url >> .npmrc
-
-    # Publish to Verdaccio
-    yarn publish --tag latest --new-version $package_version
 else
-    yarn --no-git-tag-version --new-version version "$package_version-build-$circle_build_num"
-    
     # Publish to Gemfury
-    yarn publish --tag $dist_tag
-
-    # Overwrite .npmrc to point to Verdaccio
-    rm .npmrc
-    echo '@themuse:registry=https://verdaccio.inf.themuse.com/' >> .npmrc
-    url="//verdaccio.inf.themuse.com/:_authToken=${NPM_AUTH_TOKEN}"
-    echo $url >> .npmrc
-
-    # Publish to Verdaccio
+    yarn --no-git-tag-version --new-version version "$package_version-build-$circle_build_num"
     yarn publish --tag $dist_tag
 
     echo "To install via dist-tag: yarn install --save $package_name@$dist_tag"
