@@ -21,36 +21,6 @@ login_to_ecr: &login_to_ecr
       ecr-login
     sudo chown -R circleci:circleci $HOME/.docker
 
-start_vpn: &start_vpn
-  name: Startup OpenVPN
-  background: true
-  command: |
-    # Download configuration
-    aws s3 sync s3://themuse-ops/ci/vpn ./vpn
-    # Startup vpn
-    docker run \
-      --name=ovpn \
-      --cap-add=NET_ADMIN \
-      --dns=10.0.0.2 \
-      --dns=10.0.0.3 \
-      --device=/dev/net/tun \
-      -v $PWD/vpn:/app/vpn \
-      -w /app/vpn \
-      "themuse/tools:${TOOLS_VERSION:-2.5.8}" openvpn --config config.conf
-
-wait_for_vpn: &wait_for_vpn
-  name: Wait for VPN
-  command: |
-    # Wait until we get the container itself
-    while test -z "$(docker ps -q -f name=ovpn)"; do sleep 1; done
-    # Test connectivity
-    docker run \
-      --rm \
-      --network=container:ovpn \
-      "themuse/tools:${TOOLS_VERSION:-2.5.8}" \
-      host -R 3 -W 5 inf.themuse.com 10.0.0.2
-  no_output_timeout: 3m
-
 build: &build
   name: Build
   command: docker build --build-arg GEMFURY_TOKEN --build-arg NODE_ENV=${NODE_ENV:-development} -t bluefin-link .
@@ -61,16 +31,12 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: *start_vpn
-      - run: *wait_for_vpn
       - run: *login_to_ecr
       - run: *build
   test:
     <<: *defaults
     steps:
       - checkout
-      - run: *start_vpn
-      - run: *wait_for_vpn
       - run: *login_to_ecr
       - run: *build
       - run:
@@ -82,8 +48,6 @@ jobs:
     <<: *defaults
     steps:
       - checkout
-      - run: *start_vpn
-      - run: *wait_for_vpn
       - run:
           name: Publish
           command: |
@@ -92,7 +56,6 @@ jobs:
             dist_tag=$(docker run --rm "themuse/tools:${TOOLS_VERSION:-2.5.8}" generate-deployment-id $CIRCLE_BRANCH)
             docker run \
               --rm \
-              --network=container:ovpn \
               --user root \
               -v $(pwd):/app/workspace \
               -w /app/workspace \
