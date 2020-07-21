@@ -40,10 +40,9 @@ jobs:
       - run: *login_to_ecr
       - run: *build
       - run:
-          name: Execute Tests & coverage
+          name: Execute Tests
           command: |
             docker-compose run --rm bluefin-link yarn run test
-            docker-compose run -e "CODECOV_TOKEN=$CODECOV_TOKEN" --rm bluefin-link yarn run coverage
   publish:
     <<: *defaults
     steps:

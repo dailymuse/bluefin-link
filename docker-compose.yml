@@ -8,7 +8,6 @@ services:
       - AWS_DEFAULT_OUTPUT=$AWS_DEFAULT_OUTPUT
       - AWS_DEFAULT_REGION=$AWS_DEFAULT_REGION
       - AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-      - CODECOV_TOKEN=$CODECOV_TOKEN
       - NPM_AUTH_TOKEN=$NPM_AUTH_TOKEN
       - DATABASE_URL=postgres://postgres:posgres@pg:5432/test
     depends_on:

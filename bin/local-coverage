@@ -12,4 +12,3 @@ standard &&
 
 # Run tests
 nyc ava && nyc report --reporter=lcov text
-./node_modules/.bin/codecov -t $CODECOV_TOKEN
